@@ -1,13 +1,18 @@
+from collections import Counter
 import numpy as np
 import scipy.sparse as sp
 import warnings
 
+from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.utils import check_random_state
 from sklearn.utils.extmath import stable_cumsum
 from sklearn.utils import check_array
 from sklearn.utils import as_float_array
 from sklearn.utils.sparsefuncs_fast import assign_rows_csr
+
+from ._utils import inner_product
+from ._utils import check_sparsity
 
 
 class SphericalKMeans:
@@ -78,19 +83,21 @@ class SphericalKMeans:
     enough large k for document clustering. 
     """
     
-    def __init__(self, n_clusters=8, init='kmeans++', max_iter=10, 
-                 tol=0.0001, verbose=0, random_state=None, n_jobs=1,
-                 algorithm=None
+    def __init__(self, n_clusters=8, init='kmeans++', sparsity=None, 
+                 max_iter=10, tol=0.0001, verbose=0, random_state=None,
+                 n_jobs=1, algorithm=None, **kargs
                 ):
         
         self.n_clusters = n_clusters
         self.init = init
+        self.sparsity = sparsity
         self.max_iter = max_iter
         self.tol = tol
         self.verbose = verbose
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.algorithm = algorithm
+        self.params = kargs
     
     def _check_fit_data(self, X):
         """Verify that the number of samples given is larger than k
@@ -117,10 +124,12 @@ class SphericalKMeans:
         
         self.cluster_centers_, self.labels_, self.inertia_, = \
             k_means(
-                X, n_clusters=self.n_clusters, init=self.init,
-                max_iter=self.max_iter, verbose=self.verbose,
-                tol=self.tol, random_state=random_state,
-                n_jobs=self.n_jobs, algorithm=self.algorithm
+                X, n_clusters=self.n_clusters, init=self.init, 
+                sparsity=self.sparsity, max_iter=self.max_iter,
+                verbose=self.verbose, tol=self.tol, 
+                random_state=random_state, n_jobs=self.n_jobs,
+                algorithm=self.algorithm,
+                **self.params
             )
         return self
     
@@ -172,9 +181,9 @@ def _tolerance(X, tol):
     """
     return max(1, int(X.shape[0] * tol))
 
-def k_means(X, n_clusters, init='random', max_iter=10,
+def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
             verbose=False, tol=1e-4, random_state=None,
-            n_jobs=1, algorithm=None
+            n_jobs=1, algorithm=None, **kargs
            ):
 
     random_state = check_random_state(random_state)
@@ -192,15 +201,16 @@ def k_means(X, n_clusters, init='random', max_iter=10,
     
     # For a single thread, run a k-means once
     centers, labels, inertia, n_iter_ = kmeans_single(
-        X, n_clusters, max_iter=max_iter, init=init, verbose=verbose,
-        tol=tol, random_state=random_state, algorithm=algorithm)
+        X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
+        verbose=verbose, tol=tol, random_state=random_state,
+        algorithm=algorithm, **kargs)
 
     # parallelisation of k-means runs
     # TODO
     
     return centers, labels, inertia
 
-def initialize(X, n_clusters, init, random_state):
+def initialize(X, n_clusters, init, random_state, **kargs):
     n_samples = X.shape[0]
     
     # Random selection
@@ -215,12 +225,16 @@ def initialize(X, n_clusters, init, random_state):
                              'should be same with n_clusters parameter'
                             )
     elif isinstance(init, str) and init == 'kmeans++':
-        centers = _k_init(X, n_clusters, random_state)        
+        centers = _k_init(X, n_clusters, random_state)
+    elif isinstance(init, str) and init == 'similar_cut':
+        max_similar = kargs.get('max_similar', 0.5)
+        sample_factor = kargs.get('sample_factor', 3)
+        centers = _similar_cut_init(X, n_clusters, random_state, max_similar, sample_factor)
     # Sophisticated initialization 
     # TODO
     else:
         raise ValueError('the init parameter for spherical k-means should be '
-                         'random or ndarray or '
+                         'random, ndarray, kmeans++ or similar_cut'
                         )
     return centers
 
@@ -280,20 +294,72 @@ def _k_init(X, n_clusters, random_state):
 
     return centers
 
-def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++',
-                  verbose=0, tol=1, random_state=None, algorithm=None):
+def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_factor=3):
     
-    centers = initialize(X, n_clusters, init, random_state)
+    n_data, n_features = X.shape
+    centers = np.empty((n_clusters, n_features), dtype=X.dtype)
+    
+    n_subsamples = min(n_data, int(sample_factor * n_clusters))
+    permutation = np.random.permutation(n_data)
+    X_sub = X[permutation[:n_subsamples]]
+    n_samples = X_sub.shape[0]
+    
+    # Pick first center randomly
+    center_id = random_state.randint(n_samples)
+    center_set = {center_id}
+    centers[0] = X[center_id].toarray()
+    candidates = np.asarray(range(n_samples))
+    
+    # Pick the remaining n_clusters-1 points
+    for c in range(1, n_clusters):        
+        closest_dist = inner_product(X_sub[center_id,:], X_sub[candidates,:].T)
+
+        # Remove center similar points from candidates
+        remains = np.where(closest_dist.todense() < max_similar)[1]
+        if len(remains) == 0:
+            break
+            
+        np.random.shuffle(remains)
+        center_id = candidates[remains[0]]
+        
+        centers[c] = X_sub[center_id].toarray()
+        candidates = candidates[remains[1:]]
+        center_set.add(center_id)
+
+    # If not enough center point search, random sample n_clusters - c points
+    n_requires = n_clusters - 1 - c
+    if n_requires > 0:
+        if n_requires < (n_data - n_subsamples):
+            random_centers = permutation[n_subsamples:n_subsamples+n_requires]
+        else:
+            center_set = set(permutation[np.asarray(list(center_set))])
+            random_centers = []
+            for idx in np.random.permutation(n_samples):
+                if idx in center_set:
+                    continue
+                random_centers.append(idx)
+                if len(random_centers) == n_requires:
+                    break
+        
+        for i, center_id in enumerate(random_centers):
+            centers[c+i+1] = X[center_id].toarray()
+    
+    return centers
+
+def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
+                  verbose=0, tol=1, random_state=None, algorithm=None, **kargs):
+    
+    centers = initialize(X, n_clusters, init, random_state, **kargs)
     if verbose:
         print('Initialization was completed')
     
     # Not developed optimized algorithm
     centers, labels, inertia, n_iter_ = _kmeans_single_banilla(
-        X, n_clusters, centers, max_iter, verbose, tol)
+        X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs)
 
     return centers, labels, inertia, n_iter_
 
-def _kmeans_single_banilla(X, n_clusters, centers, max_iter, verbose, tol):
+def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs):
     
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
@@ -312,6 +378,14 @@ def _kmeans_single_banilla(X, n_clusters, centers, max_iter, verbose, tol):
         
         labels_old = labels
         
+        if isinstance(sparsity, str) and sparsity == 'sculley':
+            radius = kargs.get('radius', 10)
+            epsilon = kargs.get('epsilon', 5)
+            centers = _sculley_projections(centers, radius, epsilon)
+        elif isinstance(sparsity, str) and sparsity == 'minimum_df':
+            minimum_df_factor = kargs.get('minimum_df_factor', 0.01)
+            centers = _minimum_df_projections(X, centers, labels_old, minimum_df_factor)
+
         # debug
         # n_samples_in_cluster_ = np.bincount(labels, minlength=n_clusters)
         # n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
@@ -380,7 +454,64 @@ def _assign(X, dist, n_clusters):
         for ind in range(indptr[i], indptr[i + 1]):
             j = indices[ind]
             centers[curr_label, j] += data[ind]
-
-    centers /= n_samples_in_cluster[:, np.newaxis]
+    
+    centers = normalize(centers)
+    #centers /= n_samples_in_cluster[:, np.newaxis]
     
     return centers, labels
+
+def _sculley_projections(centers, radius, epsilon):
+    n_clusters = centers.shape[0]
+    for c in range(n_clusters):
+        centers[c] = _sculley_projection(centers[c], radius, epsilon)
+    centers = normalize(centers)
+    return centers
+    
+def _sculley_projection(center, radius, epsilon):
+    l1_norm = lambda x:abs(x).sum()
+    inf_norm = lambda x:abs(x).max()
+    
+    upper, lower = inf_norm(center), 0
+    current = l1_norm(center)
+    
+    larger_than = radius * (1 + epsilon)
+    smaller_than = radius
+    
+    _n_iter = 0
+    theta = 0
+    
+    while current > larger_than or current < smaller_than:
+        theta = (upper + lower) / 2.0 # Get L1 value for this theta
+        current = sum([v for v in (abs(center) - theta) if v > 0])
+        if current <= radius:
+            upper = theta
+        else:
+            lower = theta
+    
+        # for safety, preventing infinite loops
+        _n_iter += 1
+        if _n_iter > 10000: break
+        if upper - lower < 0.001:
+            break
+    
+    signs = np.sign(center)
+    projection = [max(0, ci) for ci in (abs(center) - theta)]
+    projection = np.asarray([ci * signs[i] if ci > 0 else 0 for i, ci in enumerate(projection)])
+    return projection
+
+def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
+    n_clusters = centers.shape[0]
+    centers_ = centers.copy()
+    for c in range(n_clusters):
+        docs = np.where(labels_ == c)[0]
+        min_df = len(docs) * minimum_df_factor
+        if min_df < 2:
+            continue
+        centers_[c] = _minimum_df_projection(X[docs,:], centers_[c], int(min_df))
+    centers_ = normalize(centers_)
+    return centers_
+    
+def _minimum_df_projection(X_sub, center, min_df):
+    dfs = Counter(X_sub.nonzero()[1])
+    center[[idx for idx, df in dfs.items() if df < min_df]] = 0
+    return center
