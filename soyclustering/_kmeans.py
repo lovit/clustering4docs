@@ -1,4 +1,6 @@
 from collections import Counter
+import datetime
+import time
 import numpy as np
 import scipy.sparse as sp
 import warnings
@@ -349,9 +351,12 @@ def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_fact
 def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
                   verbose=0, tol=1, random_state=None, algorithm=None, **kargs):
     
+    _initialize_time = time.time()
     centers = initialize(X, n_clusters, init, random_state, **kargs)
+    _initialize_time = time.time() - _initialize_time
+
     if verbose:
-        print('Initialization was completed')
+        print('Initialization was completed. time=%.2f sec' % _initialize_time)
     
     # Not developed optimized algorithm
     centers, labels, inertia, n_iter_ = _kmeans_single_banilla(
@@ -366,6 +371,8 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
     
     for n_iter_ in range(max_iter):
         
+        _iter_time = time.time()
+
         dist = cosine_distances(X, centers)
         centers, labels = _assign(X, dist, n_clusters)
         inertia = dist.min(axis=1).sum()
@@ -377,7 +384,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
             n_diff = len(diff)
         
         labels_old = labels
-        
+
         if isinstance(sparsity, str) and sparsity == 'sculley':
             radius = kargs.get('radius', 10)
             epsilon = kargs.get('epsilon', 5)
@@ -386,13 +393,16 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
             minimum_df_factor = kargs.get('minimum_df_factor', 0.01)
             centers = _minimum_df_projections(X, centers, labels_old, minimum_df_factor)
 
+        #if isinstance(sparsity, str):
+        #    centers = csr_matrix(centers)
         # debug
         # n_samples_in_cluster_ = np.bincount(labels, minlength=n_clusters)
         # n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
         # print('after assign, n_empty', n_empty_clusters_)
-        
+
         if verbose:
-            print('n_iter=%d, changed=%d, inertia=%.2f' % (n_iter_, n_diff, inertia))
+            _iter_time = time.time() - _iter_time
+            print('n_iter=%d, changed=%d, inertia=%.2f, iter_time=%.2f sec' % (n_iter_, n_diff, inertia, _iter_time))
         
         if n_diff <= tol:
             if verbose and (n_iter_ + 1 < max_iter):
