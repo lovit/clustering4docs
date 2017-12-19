@@ -238,6 +238,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
         raise ValueError('the init parameter for spherical k-means should be '
                          'random, ndarray, kmeans++ or similar_cut'
                         )
+    centers = normalize(centers)
     return centers
 
 def _k_init(X, n_clusters, random_state):
@@ -394,7 +395,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
             centers = _minimum_df_projections(X, centers, labels_old, minimum_df_factor)
 
         #if isinstance(sparsity, str):
-        #    centers = csr_matrix(centers)
+        #    centers = sp.csr_matrix(centers)
         # debug
         # n_samples_in_cluster_ = np.bincount(labels, minlength=n_clusters)
         # n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
@@ -511,17 +512,23 @@ def _sculley_projection(center, radius, epsilon):
 
 def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
     n_clusters = centers.shape[0]
-    centers_ = centers.copy()
+    n_features = X.shape[1]
+    centers_ = sp.csr_matrix(centers.copy())
+
+    data = centers_.data
+    indices = centers_.indices
+    indptr = centers_.indptr
+
+    n_samples_in_cluster = np.bincount(labels_, minlength=n_clusters)
+    min_value = np.asarray([(minimum_df_factor / n_samples_in_cluster[c]) if n_samples_in_cluster[c] > 1 else 0 for c in range(n_clusters)])
     for c in range(n_clusters):
-        docs = np.where(labels_ == c)[0]
-        min_df = len(docs) * minimum_df_factor
-        if min_df < 2:
-            continue
-        centers_[c] = _minimum_df_projection(X[docs,:], centers_[c], int(min_df))
+        for ind in range(indptr[c], indptr[c + 1]):
+            if data[ind] ** 2 < min_value[c]:
+                data[ind] = 0
+    centers_ = centers_.todense()
     centers_ = normalize(centers_)
     return centers_
-    
-def _minimum_df_projection(X_sub, center, min_df):
-    dfs = Counter(X_sub.nonzero()[1])
-    center[[idx for idx, df in dfs.items() if df < min_df]] = 0
+
+def _minimum_df_projection(center, min_value):
+    center[[idx for idx, v in enumerate(center) if v**2 < min_value]] = 0
     return center
