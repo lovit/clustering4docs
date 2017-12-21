@@ -360,7 +360,7 @@ def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
     degree_of_sparsity = None
     degree_of_sparsity = check_sparsity(centers)
     ds_strf = ', sparsity={:.3}'.format(degree_of_sparsity) if degree_of_sparsity is not None else ''
-    initial_state = 'initialization_time={} sec{}'.format('%.2f'%_initialize_time, ds_strf)
+    initial_state = 'initialization_time={} sec{}'.format('%f'%_initialize_time, ds_strf)
 
     if verbose:
         print(initial_state)
@@ -414,7 +414,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         degree_of_sparsity = None
         degree_of_sparsity = check_sparsity(centers)
         ds_strf = ', sparsity={:.3}'.format(degree_of_sparsity) if degree_of_sparsity is not None else ''
-        state = 'n_iter={}, changed={}, inertia={}, iter_time={} sec{}'.format(n_iter_, n_diff, '%.2f'%inertia, '%.2f'%_iter_time, ds_strf)
+        state = 'n_iter={}, changed={}, inertia={}, iter_time={} sec{}'.format(n_iter_, n_diff, '%.3f'%inertia, '%.3f'%_iter_time, ds_strf)
 
         logs.append(state)
 
