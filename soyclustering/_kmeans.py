@@ -100,6 +100,7 @@ class SphericalKMeans:
         self.n_jobs = n_jobs
         self.algorithm = algorithm
         self.params = kargs
+        self._logs = []
     
     def _check_fit_data(self, X):
         """Verify that the number of samples given is larger than k
@@ -124,7 +125,7 @@ class SphericalKMeans:
         random_state = check_random_state(self.random_state)
         X = self._check_fit_data(X)
         
-        self.cluster_centers_, self.labels_, self.inertia_, = \
+        self.cluster_centers_, self.labels_, self.inertia_, self._logs = \
             k_means(
                 X, n_clusters=self.n_clusters, init=self.init, 
                 sparsity=self.sparsity, max_iter=self.max_iter,
@@ -199,10 +200,10 @@ def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
     
     # Validate init
 
-    labels, inertia, centers = None, None, None
+    labels, inertia, centers, logs = None, None, None, None
     
     # For a single thread, run a k-means once
-    centers, labels, inertia, n_iter_ = kmeans_single(
+    centers, labels, inertia, n_iter_, logs = kmeans_single(
         X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
         verbose=verbose, tol=tol, random_state=random_state,
         algorithm=algorithm, **kargs)
@@ -210,7 +211,7 @@ def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
     # parallelisation of k-means runs
     # TODO
     
-    return centers, labels, inertia
+    return centers, labels, inertia, logs
 
 def initialize(X, n_clusters, init, random_state, **kargs):
     n_samples = X.shape[0]
@@ -356,21 +357,28 @@ def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
     centers = initialize(X, n_clusters, init, random_state, **kargs)
     _initialize_time = time.time() - _initialize_time
 
+    degree_of_sparsity = None
+    degree_of_sparsity = check_sparsity(centers)
+    ds_strf = ', sparsity={:.3}'.format(degree_of_sparsity) if degree_of_sparsity is not None else ''
+    initial_state = 'initialization_time={} sec{}'.format('%.2f'%_initialize_time, ds_strf)
+
     if verbose:
-        print('Initialization was completed. time=%.2f sec' % _initialize_time)
-    
-    # Not developed optimized algorithm
-    centers, labels, inertia, n_iter_ = _kmeans_single_banilla(
+        print(initial_state)
+
+    centers, labels, inertia, n_iter_, logs = _kmeans_single_banilla(
         X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs)
 
-    return centers, labels, inertia, n_iter_
+    logs.insert(0, initial_state)
+
+    return centers, labels, inertia, n_iter_, logs
 
 def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs):
     
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
+    logs = []
     
-    for n_iter_ in range(max_iter):
+    for n_iter_ in range(1, max_iter + 1):
         
         _iter_time = time.time()
 
@@ -401,18 +409,24 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         # n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
         # print('after assign, n_empty', n_empty_clusters_)
 
+        _iter_time = time.time() - _iter_time
+
+        degree_of_sparsity = None
+        degree_of_sparsity = check_sparsity(centers)
+        ds_strf = ', sparsity={:.3}'.format(degree_of_sparsity) if degree_of_sparsity is not None else ''
+        state = 'n_iter={}, changed={}, inertia={}, iter_time={} sec{}'.format(n_iter_, n_diff, '%.2f'%inertia, '%.2f'%_iter_time, ds_strf)
+
+        logs.append(state)
+
         if verbose:
-            _iter_time = time.time() - _iter_time
-            print('n_iter=%d, changed=%d, inertia=%.2f, iter_time=%.2f sec' % (n_iter_, n_diff, inertia, _iter_time))
-        
+            print(state)
+
         if n_diff <= tol:
             if verbose and (n_iter_ + 1 < max_iter):
                 print('Early converged.')
             break
-    
-    n_iter_ += 1
 
-    return centers, labels, inertia, n_iter_
+    return centers, labels, inertia, n_iter_, logs
 
 def _assign(X, dist, n_clusters):
     
