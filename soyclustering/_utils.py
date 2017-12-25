@@ -12,7 +12,7 @@ def check_sparsity(mat):
     return sum(len(np.where(mat[c] != 0)[0]) for c in range(n)) / (n*m)
 
 def proportion_keywords(centers, labels, min_score=0.5, topk=200,
-                        candidates_topk=1000, index2word=None, passwords=None):
+                        candidates_topk=300, index2word=None, passwords=None):
     
     l1_normalize = lambda x:x/x.sum()
     

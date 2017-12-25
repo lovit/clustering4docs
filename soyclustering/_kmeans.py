@@ -100,7 +100,6 @@ class SphericalKMeans:
         self.n_jobs = n_jobs
         self.algorithm = algorithm
         self.params = kargs
-        self._logs = []
     
     def _check_fit_data(self, X):
         """Verify that the number of samples given is larger than k
@@ -125,7 +124,7 @@ class SphericalKMeans:
         random_state = check_random_state(self.random_state)
         X = self._check_fit_data(X)
         
-        self.cluster_centers_, self.labels_, self.inertia_, self._logs = \
+        self.cluster_centers_, self.labels_, self.inertia_, self._logs, self._tmp_labels_ = \
             k_means(
                 X, n_clusters=self.n_clusters, init=self.init, 
                 sparsity=self.sparsity, max_iter=self.max_iter,
@@ -203,7 +202,7 @@ def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
     labels, inertia, centers, logs = None, None, None, None
     
     # For a single thread, run a k-means once
-    centers, labels, inertia, n_iter_, logs = kmeans_single(
+    centers, labels, inertia, n_iter_, logs, tmp_labels = kmeans_single(
         X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
         verbose=verbose, tol=tol, random_state=random_state,
         algorithm=algorithm, **kargs)
@@ -211,7 +210,7 @@ def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
     # parallelisation of k-means runs
     # TODO
     
-    return centers, labels, inertia, logs
+    return centers, labels, inertia, logs, tmp_labels
 
 def initialize(X, n_clusters, init, random_state, **kargs):
     n_samples = X.shape[0]
@@ -227,6 +226,9 @@ def initialize(X, n_clusters, init, random_state, **kargs):
             raise ValueError('the number of customized initial points ' 
                              'should be same with n_clusters parameter'
                             )
+    elif callable(init):
+        centers = init(X, n_clusters, random_state=random_state)
+        centers = np.asarray(centers, dtype=X.dtype)
     elif isinstance(init, str) and init == 'kmeans++':
         centers = _k_init(X, n_clusters, random_state)
     elif isinstance(init, str) and init == 'similar_cut':
@@ -365,18 +367,19 @@ def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
     if verbose:
         print(initial_state)
 
-    centers, labels, inertia, n_iter_, logs = _kmeans_single_banilla(
+    centers, labels, inertia, n_iter_, logs, _tmp_labels = _kmeans_single_banilla(
         X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs)
 
     logs.insert(0, initial_state)
 
-    return centers, labels, inertia, n_iter_, logs
+    return centers, labels, inertia, n_iter_, logs, _tmp_labels
 
 def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs):
     
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
     logs = []
+    tmp_labels = []
     
     for n_iter_ in range(1, max_iter + 1):
         
@@ -417,6 +420,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         state = 'n_iter={}, changed={}, inertia={}, iter_time={} sec{}'.format(n_iter_, n_diff, '%.3f'%inertia, '%.3f'%_iter_time, ds_strf)
 
         logs.append(state)
+        tmp_labels.append(labels.copy())
 
         if verbose:
             print(state)
@@ -426,7 +430,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
                 print('Early converged.')
             break
 
-    return centers, labels, inertia, n_iter_, logs
+    return centers, labels, inertia, n_iter_, logs, tmp_labels
 
 def _assign(X, dist, n_clusters):
     
