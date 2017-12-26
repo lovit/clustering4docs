@@ -50,7 +50,9 @@ class SphericalKMeans:
     n_jobs : int
         To be implemented
     algorithm : str, default None
-        Computation algorithm. 
+        Computation algorithm.
+    n_init : int.
+        Ignored
 
     Attributes
     ----------
@@ -87,7 +89,7 @@ class SphericalKMeans:
     
     def __init__(self, n_clusters=8, init='kmeans++', sparsity=None, 
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
-                 n_jobs=1, algorithm=None, **kargs
+                 n_jobs=1, algorithm=None, n_init=1, **kargs
                 ):
         
         self.n_clusters = n_clusters
