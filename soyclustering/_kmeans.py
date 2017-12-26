@@ -218,7 +218,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     # Random selection
     if isinstance(init, str) and init == 'random':
         seeds = random_state.permutation(n_samples)[:k]
-        centers = X[seeds]
+        centers = X[seeds,:].todense()
     # Customized initial centroids
     elif hasattr(init, '__array__'):
         centers = np.array(init, dtype=X.dtype)
