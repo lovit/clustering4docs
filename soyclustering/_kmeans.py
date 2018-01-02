@@ -7,6 +7,7 @@ import warnings
 
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics import pairwise_distances_argmin_min
 from sklearn.utils import check_random_state
 from sklearn.utils.extmath import stable_cumsum
 from sklearn.utils import check_array
@@ -219,7 +220,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     
     # Random selection
     if isinstance(init, str) and init == 'random':
-        seeds = random_state.permutation(n_samples)[:k]
+        seeds = random_state.permutation(n_samples)[:n_clusters]
         centers = X[seeds,:].todense()
     # Customized initial centroids
     elif hasattr(init, '__array__'):
@@ -387,9 +388,9 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         
         _iter_time = time.time()
 
-        dist = cosine_distances(X, centers)
-        centers, labels = _assign(X, dist, n_clusters)
-        inertia = dist.min(axis=1).sum()
+        labels, distances = pairwise_distances_argmin_min(X, centers, metric='cosine')
+        centers = _update(X, labels, distances, n_clusters)
+        inertia = distances.sum()
         
         if n_iter_ == 0:
             n_diff = n_samples
@@ -406,13 +407,6 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         elif isinstance(sparsity, str) and sparsity == 'minimum_df':
             minimum_df_factor = kargs.get('minimum_df_factor', 0.01)
             centers = _minimum_df_projections(X, centers, labels_old, minimum_df_factor)
-
-        #if isinstance(sparsity, str):
-        #    centers = sp.csr_matrix(centers)
-        # debug
-        # n_samples_in_cluster_ = np.bincount(labels, minlength=n_clusters)
-        # n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
-        # print('after assign, n_empty', n_empty_clusters_)
 
         _iter_time = time.time() - _iter_time
 
@@ -434,16 +428,13 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
 
     return centers, labels, inertia, n_iter_, logs, tmp_labels
 
-def _assign(X, dist, n_clusters):
+def _update(X, labels, distances, n_clusters):
     
     n_featuers = X.shape[1]
     centers = np.zeros((n_clusters, n_featuers))
     
-    labels = dist.argmin(axis=1)
-    
     n_samples_in_cluster = np.bincount(labels, minlength=n_clusters)
     empty_clusters = np.where(n_samples_in_cluster == 0)[0]
-    solo_clusters = np.where(n_samples_in_cluster == 1)[0]
     n_empty_clusters = empty_clusters.shape[0]
     
     data = X.data
@@ -451,45 +442,24 @@ def _assign(X, dist, n_clusters):
     indptr = X.indptr
     
     if n_empty_clusters > 0:
-        #find points to reassign empty clusters to
-        dist_copy = dist.copy()
-        dist_copy.sort(axis=1)
-        far_from_centers_ = dist_copy[:,-1].argsort()[::-1]
-        far_from_centers = []
-        for far in far_from_centers_:
-            if not (far in empty_clusters) and not (far in solo_clusters):
-                far_from_centers.append(far)
-            if len(far_from_centers) == n_empty_clusters:
-                break
+        # find points to reassign empty clusters to
+        far_from_centers = distances.argsort()[::-1][:n_empty_clusters]
         
-        n_remain_empty_clusters = n_empty_clusters - len(far_from_centers)
-        if n_remain_empty_clusters > 0:            
-            warnings.warn('%d empty cluster exists' 
-                % n_remain_empty_clusters, RuntimeWarning)
-        
-        # debug
-        # print('empty', empty_clusters)
-        
+        # reassign labels to empty clusters
         for i in range(n_empty_clusters):
             centers[empty_clusters[i]] = X[far_from_centers[i]].toarray()
             n_samples_in_cluster[empty_clusters[i]] = 1
             labels[far_from_centers[i]] = empty_clusters[i]
-            
-        n_samples_in_cluster_ = np.bincount(labels, minlength=n_clusters)
-        n_empty_clusters_ = np.where(n_samples_in_cluster_ == 0)[0].shape[0]
-        
-        # debug
-        # print('empty {} --> {}'.format(n_empty_clusters, n_empty_clusters_))
 
+    # cumulate centroid vector
     for i, curr_label in enumerate(labels):
         for ind in range(indptr[i], indptr[i + 1]):
             j = indices[ind]
             centers[curr_label, j] += data[ind]
     
+    # L2 normalization
     centers = normalize(centers)
-    #centers /= n_samples_in_cluster[:, np.newaxis]
-    
-    return centers, labels
+    return centers
 
 def _sculley_projections(centers, radius, epsilon):
     n_clusters = centers.shape[0]
