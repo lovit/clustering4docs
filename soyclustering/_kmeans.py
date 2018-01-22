@@ -2,6 +2,7 @@ from collections import Counter
 import datetime
 import time
 import numpy as np
+import os
 import scipy.sparse as sp
 import warnings
 
@@ -54,6 +55,22 @@ class SphericalKMeans:
         Computation algorithm.
     n_init : int.
         Ignored
+    sparsity: {'sculley' or 'minimum_df'}
+        Method for preserving sparsity of centroids. 
+        'sculley': L1 ball projection method. 
+            Reference: David Sculley. Web-scale k-means clustering. 
+            In Proceedings of international conference on World wide web,2010.
+            It requires two parameters 'radius' and 'epsilon'. 
+            'radius': default 10
+            'epsilon': default 5
+        'minium_df': Pruning method. It drops elements to zero which lower 
+            than beta / |DF(C)|. DF(C) is the document number of a cluster and
+            beta is constant parameter. 
+            It requires one parameter 'minimum_df_factor' a.k.a beta
+            'minimum_df_factor': default 0.01
+    debug_directory: str, default: None
+        When debug_directory is not None, model save logs (when verbose) and
+        temporal cluster labels for all iterations.
 
     Attributes
     ----------
@@ -90,7 +107,8 @@ class SphericalKMeans:
     
     def __init__(self, n_clusters=8, init='kmeans++', sparsity=None, 
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
-                 n_jobs=1, algorithm=None, n_init=1, **kargs
+                 debug_directory=None, n_jobs=1, algorithm=None,
+                 n_init=1, **kargs
                 ):
         
         self.n_clusters = n_clusters
@@ -100,6 +118,7 @@ class SphericalKMeans:
         self.tol = tol
         self.verbose = verbose
         self.random_state = random_state
+        self.debug_directory = debug_directory
         self.n_jobs = n_jobs
         self.algorithm = algorithm
         self.params = kargs
@@ -127,14 +146,13 @@ class SphericalKMeans:
         random_state = check_random_state(self.random_state)
         X = self._check_fit_data(X)
         
-        self.cluster_centers_, self.labels_, self.inertia_, self._logs, self._tmp_labels_ = \
+        self.cluster_centers_, self.labels_, self.inertia_, = \
             k_means(
                 X, n_clusters=self.n_clusters, init=self.init, 
                 sparsity=self.sparsity, max_iter=self.max_iter,
-                verbose=self.verbose, tol=self.tol, 
-                random_state=random_state, n_jobs=self.n_jobs,
-                algorithm=self.algorithm,
-                **self.params
+                verbose=self.verbose, tol=self.tol, random_state=random_state, 
+                debug_directory=self.debug_directory, n_jobs=self.n_jobs,
+                algorithm=self.algorithm, **self.params
             )
         return self
     
@@ -187,7 +205,7 @@ def _tolerance(X, tol):
     return max(1, int(X.shape[0] * tol))
 
 def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
-            verbose=False, tol=1e-4, random_state=None,
+            verbose=False, tol=1e-4, random_state=None, debug_directory=None,
             n_jobs=1, algorithm=None, **kargs
            ):
 
@@ -200,20 +218,29 @@ def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
     X = as_float_array(X)
     tol = _tolerance(X, tol)
     
-    # Validate init
-
-    labels, inertia, centers, logs = None, None, None, None
+    labels, inertia, centers, debug_header = None, None, None, None
     
+    if debug_directory:
+        # Create debug header
+        strf_now = datetime.datetime.now()
+        debug_header = str(strf_now).replace(':','-').replace(' ','_').split('.')[0]
+        
+        # Check debug_directory
+        if not os.path.exists(debug_directory):
+            os.makedirs(debug_directory)
+            s = datetime.datetime.now()
+            
     # For a single thread, run a k-means once
-    centers, labels, inertia, n_iter_, logs, tmp_labels = kmeans_single(
+    centers, labels, inertia, n_iter_ = kmeans_single(
         X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
-        verbose=verbose, tol=tol, random_state=random_state,
+        verbose=verbose, tol=tol, random_state=random_state, 
+        debug_directory = debug_directory, debug_header=debug_header,
         algorithm=algorithm, **kargs)
 
     # parallelisation of k-means runs
     # TODO
     
-    return centers, labels, inertia, logs, tmp_labels
+    return centers, labels, inertia
 
 def initialize(X, n_clusters, init, random_state, **kargs):
     n_samples = X.shape[0]
@@ -356,7 +383,8 @@ def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_fact
     return centers
 
 def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
-                  verbose=0, tol=1, random_state=None, algorithm=None, **kargs):
+                  verbose=0, tol=1, random_state=None, debug_directory=None,
+                  debug_header=None, algorithm=None, **kargs):
     
     _initialize_time = time.time()
     centers = initialize(X, n_clusters, init, random_state, **kargs)
@@ -369,20 +397,23 @@ def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
 
     if verbose:
         print(initial_state)
+        
+    if debug_directory:
+        log_path = '{}/{}_logs.txt'.format(debug_directory, debug_header)
+        with open(log_path, 'w', encoding='utf-8') as f:
+            f.write('{}\n'.format(initial_state))
 
-    centers, labels, inertia, n_iter_, logs, _tmp_labels = _kmeans_single_banilla(
-        X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs)
+    centers, labels, inertia, n_iter_ = _kmeans_single_banilla(
+        X, sparsity, n_clusters, centers, max_iter, verbose, 
+        tol, debug_directory, debug_header, **kargs)
 
-    logs.insert(0, initial_state)
+    return centers, labels, inertia, n_iter_
 
-    return centers, labels, inertia, n_iter_, logs, _tmp_labels
-
-def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, tol, **kargs):
+def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, 
+                           verbose, tol, debug_directory, debug_header, **kargs):
     
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
-    logs = []
-    tmp_labels = []
     
     for n_iter_ in range(1, max_iter + 1):
         
@@ -415,8 +446,24 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
         ds_strf = ', sparsity={:.3}'.format(degree_of_sparsity) if degree_of_sparsity is not None else ''
         state = 'n_iter={}, changed={}, inertia={}, iter_time={} sec{}'.format(n_iter_, n_diff, '%.3f'%inertia, '%.3f'%_iter_time, ds_strf)
 
-        logs.append(state)
-        tmp_labels.append(labels.copy())
+        if debug_directory:
+
+            # Log message
+            log_path = '{}/{}_logs.txt'.format(debug_directory, debug_header)
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write('{}\n'.format(state))
+
+            # Temporal labels
+            label_path = '{}/{}_label_iter{}.txt'.format(
+                debug_directory, debug_header, n_iter_)
+            with open(label_path, 'a', encoding='utf-8') as f:
+                for label in labels:
+                    f.write('{}\n'.format(label))
+            
+            # Temporal cluster_centroid
+            center_path = '{}/{}_centroids_iter{}.csv'.format(
+                debug_directory, debug_header, n_iter_)
+            np.savetxt(center_path, centers)
 
         if verbose:
             print(state)
@@ -426,7 +473,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, verbose, 
                 print('Early converged.')
             break
 
-    return centers, labels, inertia, n_iter_, logs, tmp_labels
+    return centers, labels, inertia, n_iter_
 
 def _update(X, labels, distances, n_clusters):
     
