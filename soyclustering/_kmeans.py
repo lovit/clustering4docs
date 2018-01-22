@@ -69,8 +69,10 @@ class SphericalKMeans:
             It requires one parameter 'minimum_df_factor' a.k.a beta
             'minimum_df_factor': default 0.01
     debug_directory: str, default: None
-        When debug_directory is not None, model save logs (when verbose) and
-        temporal cluster labels for all iterations.
+        When debug_directory is not None, model save three informations.
+        First one is logs. It contains iteration time, loss, and sparsity.
+        Second one is temporal cluster labels for all iterations.
+        Third one is temporal cluster centroid vector for all iterations.
 
     Attributes
     ----------
