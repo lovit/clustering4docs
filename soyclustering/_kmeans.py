@@ -556,6 +556,22 @@ def _sculley_projection(center, radius, epsilon):
     projection = np.asarray([ci * signs[i] if ci > 0 else 0 for i, ci in enumerate(projection)])
     return projection
 
+def L1_projection(v, z):
+    m = v.copy()
+    m.sort()
+    m = m[::-1]
+
+    pho = 0
+    for j, mj in enumerate(m):
+        t = mj - (m[:j+1].sum() - z) / (1+j)
+        if t < 0:
+            break
+        pho = j
+
+    theta = (m[:pho+1].sum() - z) / (pho+1)
+    v_ = np.asarray([max(vi-theta, 0) for vi in v])
+    return v_
+
 def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
     n_clusters = centers.shape[0]
     n_features = X.shape[1]
