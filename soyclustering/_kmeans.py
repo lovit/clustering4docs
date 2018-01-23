@@ -71,8 +71,11 @@ class SphericalKMeans:
     debug_directory: str, default: None
         When debug_directory is not None, model save three informations.
         First one is logs. It contains iteration time, loss, and sparsity.
-        Second one is temporal cluster labels for all iterations.
-        Third one is temporal cluster centroid vector for all iterations.
+        Second one is temporal cluster labels for all iterations. If you don't
+        want to save temporal cluster labels, set "debug_label_on=False"
+        Third one is temporal cluster centroid vector for all iterations. If 
+        you don't want to save temporal cluster labels, set 
+        "debug_centroid_on=False"        
 
     Attributes
     ----------
@@ -416,6 +419,8 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
     
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
+    debug_label_on = kargs.get('debug_label_on', True)
+    debug_centroid_on = kargs.get('debug_centroid_on', True)
     
     for n_iter_ in range(1, max_iter + 1):
         
@@ -456,16 +461,18 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
                 f.write('{}\n'.format(state))
 
             # Temporal labels
-            label_path = '{}/{}_label_iter{}.txt'.format(
-                debug_directory, debug_header, n_iter_)
-            with open(label_path, 'a', encoding='utf-8') as f:
-                for label in labels:
-                    f.write('{}\n'.format(label))
+            if debug_label_on:
+                label_path = '{}/{}_label_iter{}.txt'.format(
+                    debug_directory, debug_header, n_iter_)
+                with open(label_path, 'a', encoding='utf-8') as f:
+                    for label in labels:
+                        f.write('{}\n'.format(label))
             
             # Temporal cluster_centroid
-            center_path = '{}/{}_centroids_iter{}.csv'.format(
-                debug_directory, debug_header, n_iter_)
-            np.savetxt(center_path, centers)
+            if debug_centroid_on:
+                center_path = '{}/{}_centroids_iter{}.csv'.format(
+                    debug_directory, debug_header, n_iter_)
+                np.savetxt(center_path, centers)
 
         if verbose:
             print(state)
