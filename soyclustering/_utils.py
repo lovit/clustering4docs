@@ -21,7 +21,7 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
     n_clusters, n_features = centers.shape
     total_frequency = np.zeros(n_features)
 
-    if labels:
+    if labels is not None:
         n_samples_in_cluster = np.bincount(labels, minlength=n_clusters)
     else:
         n_samples_in_cluster = np.asarray([1] * n_clusters)
