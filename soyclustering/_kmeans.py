@@ -110,7 +110,7 @@ class SphericalKMeans:
     enough large k for document clustering. 
     """
     
-    def __init__(self, n_clusters=8, init='kmeans++', sparsity=None, 
+    def __init__(self, n_clusters=8, init='similar_cut', sparsity=None,
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
                  debug_directory=None, n_jobs=1, algorithm=None,
                  n_init=1, **kargs
