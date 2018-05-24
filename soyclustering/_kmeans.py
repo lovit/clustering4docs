@@ -209,7 +209,7 @@ def _tolerance(X, tol):
     """
     return max(1, int(X.shape[0] * tol))
 
-def k_means(X, n_clusters, init='kmeans++', sparsity=None, max_iter=10,
+def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
             verbose=False, tol=1e-4, random_state=None, debug_directory=None,
             n_jobs=1, algorithm=None, **kargs
            ):
@@ -264,7 +264,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     elif callable(init):
         centers = init(X, n_clusters, random_state=random_state)
         centers = np.asarray(centers, dtype=X.dtype)
-    elif isinstance(init, str) and init == 'kmeans++':
+    elif isinstance(init, str) and init == 'k-means++':
         centers = _k_init(X, n_clusters, random_state)
     elif isinstance(init, str) and init == 'similar_cut':
         max_similar = kargs.get('max_similar', 0.5)
@@ -274,7 +274,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     # TODO
     else:
         raise ValueError('the init parameter for spherical k-means should be '
-                         'random, ndarray, kmeans++ or similar_cut'
+                         'random, ndarray, k-means++ or similar_cut'
                         )
     centers = normalize(centers)
     return centers
@@ -387,7 +387,7 @@ def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_fact
     
     return centers
 
-def kmeans_single(X, n_clusters, max_iter=10, init='kmeans++', sparsity=None,
+def kmeans_single(X, n_clusters, max_iter=10, init='similar_cult', sparsity=None,
                   verbose=0, tol=1, random_state=None, debug_directory=None,
                   debug_header=None, algorithm=None, **kargs):
     
