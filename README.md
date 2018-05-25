@@ -1,24 +1,37 @@
 # soyclustering: Python clustering algorithm library
 
-For document clustering, 
+It includes
+- Spherical k-means and fast initializer for sparse vector representation such as bag of words.
+- clustering labeling
 
-	from soyclustering import SphericalKMeans
-	spherical_kmeans = SphericalKMeans(n_clusters=1000, max_iter=10, verbose=1,
-                               init='similar_cut', sparsity='minimum_df', 
-                               minimum_df_factor=0.05)
+## Usage
 
-	from scipy.io import mmread
-	x = mmread(mm_file).tocsr() # Only for sparse matrix
+Load sparse data
 
-	labels = spherical_kmeans.fit_predict(x)
+    from scipy.io import mmread
+    x = mmread(mm_file).tocsr() # Only for sparse matrix
 
-The kmeans algorith in scikit-learn have been implemented for Euclidean distance, but cosine similarity is required for document clusterig. We implemented Spherical kmeans clustering, a Cosine distance version of k-means. And it uses unfamiliar initialization method, 'similar_cut'. The 'kmeans++' is a most famous kmeans initialization method, and it uses $\frac{(x_1, x_2)^2}{\sum (D(x_1, x_i)^2}$ as sampling probability for initial seeds. However, in high-dimensional space, there is no-difference within large distance values. In high-dimensional space, the 'kmeans++' works as random sampling, with only exclusing nearby points. 'similar_cut' is efficient random sampling method preventing near-duplicated points. 
+The kmeans algorith in scikit-learn have been implemented for Euclidean distance, but cosine similarity is required for document clusterig. We implemented Spherical kmeans clustering, a Cosine distance version of k-means. And it uses unfamiliar initialization method, 'similar_cut'. The 'kmeans++' is a most famous kmeans initialization method, and it uses d(x_1, x_2)^2} / sum(d(x_1, x_i)^2} as sampling probability for initial seeds. However, in high-dimensional space, there is no-difference within large distance values. In high-dimensional space, the 'kmeans++' works as random sampling, with only exclusing nearby points. 'similar_cut' is efficient random sampling method preventing near-duplicated points.
 
+    from soyclustering import SphericalKMeans
+    spherical_kmeans = SphericalKMeans(
+        n_clusters=1000,
+        max_iter=10,
+        verbose=1,
+        init='similar_cut',
+        sparsity='minimum_df', 
+        minimum_df_factor=0.05
+    )
+
+    labels = spherical_kmeans.fit_predict(x)
+    
 For interpretability, we provide clustering keyword extractor which extracted from cluster centers and labels
 
-	from soyclustering import proportion_keywords
-	centers = spherical_kmeans.cluster_centers_
-	keywords = proportion_keywords(centers, labels, index2word=None) # If you have
+    from soyclustering import proportion_keywords
+    
+    centers = spherical_kmeans.cluster_centers_
+    idx2vocab = ['list', 'of', 'str', 'vocab']
+    keywords = proportion_keywords(centers, labels, index2word=idx2vocab)
 
 Each center vector looks like term proportions in its documents. If a word has higher proportion than other clusters, it is a good word to describe the corresponding cluster. We choose the words that appear more frequently as keywords. 
 
