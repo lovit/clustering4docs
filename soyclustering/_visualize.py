@@ -6,7 +6,7 @@ from sklearn.metrics import pairwise_distances
 import matplotlib.pyplot as plt
 
 
-def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
+def pairwise_distance_to_bokeh_heatmap(pdist, cluster_idx, palettes=None):
 
     def get_color(dist, palettes, max_=1):
         idx = int( (len(palettes)-1) * dist / max_ )
@@ -16,8 +16,7 @@ def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
     if palettes is None:
         palettes = Greys256
 
-    n_clusters = centers.shape[0]
-    pdist = pairwise_distances(centers, metric='cosine')
+    n_clusters = pdist.shape[0]
 
     xname = []
     yname = []
@@ -61,12 +60,11 @@ def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
 
     return p
 
-def centers_to_matplotlib_figure(centers, title=None,
+def pairwise_distance_to_matplotlib_figure(pdist, title=None,
     figsize=(15,15), cmap='gray', clim=None, dpi=50,
     facecolor=None, edgecolor=None, frameon=True, show=True):
 
-    n_clusters = centers.shape[0]
-    pdist = pairwise_distances(centers, metric='cosine')
+    n_clusters = pdist.shape[0]
 
     figure = plt.figure(
         figsize = figsize,
