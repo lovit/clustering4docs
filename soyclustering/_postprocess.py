@@ -28,7 +28,7 @@ def _closest_group(groups, c, pdist, max_dist):
             closest = g
     return closest
 
-def _grouping(centers, labels, max_dist, sorted_indices):
+def _grouping(centers, max_dist, sorted_indices):
     pdist = pairwise_distances(centers, metric='cosine')
     groups = [[sorted_indices[0]]]
     for c in sorted_indices[1:]:
