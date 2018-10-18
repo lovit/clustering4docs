@@ -4,7 +4,7 @@ from bokeh.palettes import Greys256
 from sklearn.metrics import pairwise_distances
 
 
-def center_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
+def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
 
     def get_color(dist, palettes, max_=1):
         idx = int( (len(palettes)-1) * dist / max_ )
