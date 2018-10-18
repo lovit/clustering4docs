@@ -12,7 +12,7 @@ def visualize_pairwise_distance(centers, labels=None,
 
     n_clusters = centers.shape[0]
 
-    if not labels:
+    if labels is None:
         labels = [i for i in range(n_clusters)]
 
     pdist = pairwise_distances(centers, metric='cosine')
