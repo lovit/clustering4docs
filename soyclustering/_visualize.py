@@ -18,14 +18,24 @@ def visualize_pairwise_distance(centers, labels=None,
     pdist = pairwise_distances(centers, metric='cosine')
 
     if sort:
+        # sort clusters by cluster size
         cluster_size = np.bincount(labels, minlength=n_clusters)
         sorted_indices, _ = zip(*sorted(enumerate(cluster_size), key=lambda x:-x[1]))
+
+        # grouping clusters
         groups = _grouping_with_pdist(pdist, max_dist, sorted_indices)
 
+        # sort groups by group size
+        groups = sorted(groups, key=lambda x:-len(x))
+
+        # create revised index
         sorted_indices = [idx for group in groups for idx in group]
-        indices_orig = list(range(n_clusters))
         indices_revised = np.ix_(sorted_indices, sorted_indices)
 
+        # create origin index
+        indices_orig = list(range(n_clusters))
+
+        # revise pairwise distance matrix
         pdist_revised = np.empty_like(pdist)
         pdist_revised[np.ix_(indices_orig,indices_orig)] = pdist[indices_revised]
 
@@ -33,7 +43,6 @@ def visualize_pairwise_distance(centers, labels=None,
         pdist_revised = pdist
 
     return pairwise_distance_to_matplotlib_figure(pdist_revised)
-
 
 def pairwise_distance_to_bokeh_heatmap(pdist, cluster_idx, palettes=None):
 
