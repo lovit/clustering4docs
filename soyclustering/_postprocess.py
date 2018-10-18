@@ -15,7 +15,7 @@ def merge_close_clusters(centers, labels, max_dist=0.7):
         sum_ = centers_[idxs].sum(axis=0)
         mean = sum_ / cluster_size[idxs].sum()
         group_centers[g] = mean
-    return group_centers, groups
+    return group_centers, group
 
 def _closest_group(groups, c, pdist, max_dist):
     dist_ = 1
@@ -25,6 +25,7 @@ def _closest_group(groups, c, pdist, max_dist):
         if dist > max_dist:
             continue
         if dist_ > dist:
+            dist_ = dist
             closest = g
     return closest
 
