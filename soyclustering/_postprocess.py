@@ -6,7 +6,7 @@ def merge_close_clusters(centers, labels, max_dist=0.7):
     cluster_size = np.bincount(labels, minlength=n_clusters)
     sorted_indices, _ = zip(*sorted(enumerate(cluster_size), key=lambda x:-x[1]))
 
-    groups = _grouping_with_centers(centers, labels, max_dist, sorted_indices)
+    groups = _grouping_with_centers(centers, max_dist, sorted_indices)
     centers_ = np.dot(np.diag(cluster_size), centers)
 
     n_groups = len(groups)
@@ -15,7 +15,7 @@ def merge_close_clusters(centers, labels, max_dist=0.7):
         sum_ = centers_[idxs].sum(axis=0)
         mean = sum_ / cluster_size[idxs].sum()
         group_centers[g] = mean
-    return group_centers, group
+    return group_centers, groups
 
 def _closest_group(groups, c, pdist, max_dist):
     dist_ = 1
