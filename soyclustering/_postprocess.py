@@ -21,7 +21,7 @@ def _closest_group(groups, c, pdist, max_dist):
     dist_ = 1
     closest = None
     for g, idxs in enumerate(groups):
-        dist = pdist[idxs, g].mean()
+        dist = pdist[idxs, c].mean()
         if dist > max_dist:
             continue
         if dist_ > dist:
