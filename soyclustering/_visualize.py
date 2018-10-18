@@ -2,6 +2,8 @@ from bokeh.models import HoverTool
 from bokeh.models import ColumnDataSource
 from bokeh.palettes import Greys256
 from sklearn.metrics import pairwise_distances
+from sklearn.metrics import pairwise_distances
+import matplotlib.pyplot as plt
 
 
 def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
@@ -58,3 +60,34 @@ def centers_to_bokeh_heatmap(centers, cluster_idx, palettes=None):
     ]
 
     return p
+
+def centers_to_matplotlib_figure(centers, title=None,
+    figsize=(15,15), cmap='gray', clim=None, dpi=50,
+    facecolor=None, edgecolor=None, frameon=True, show=True):
+
+    n_clusters = centers.shape[0]
+    pdist = pairwise_distances(centers, metric='cosine')
+
+    figure = plt.figure(
+        figsize = figsize,
+        dpi = dpi,
+        facecolor = facecolor,
+        edgecolor = edgecolor,
+        frameon = frameon
+    )
+
+    plt.xlim((0, n_clusters))
+    plt.ylim((0, n_clusters))
+
+    if clim:
+        plt.imshow(pdist, cmap=cmap, clim=clim)
+    else:
+        plt.imshow(pdist, cmap=cmap)
+
+    if title:
+        plt.title(title)
+
+    if show:
+        plt.show()
+
+    return figure
