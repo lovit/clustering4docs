@@ -7,3 +7,4 @@ __copyright__ = 'Copyright 2017 Lovit'
 from ._kmeans import SphericalKMeans
 from ._keyword import proportion_keywords
 from ._postprocess import merge_close_clusters
+from ._visualize import visualize_pairwise_distance
