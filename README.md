@@ -55,7 +55,7 @@ Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시
     idx2vocab = ['list', 'of', 'str', 'vocab']
     keywords = proportion_keywords(centers, labels, index2word=idx2vocab)
 
-122M 개의 문서로 이뤄진 IMDB reviews 에 대하여 k=1000 으로 설정하여 spherical k-means 를 학습한 뒤, 위의 proportion keywords 함수를 이용하여 군집 레이블을 추출하였습니다. 아래는 5 개 군집의 예시입니다.
+1,226k 개의 문서로 이뤄진 IMDB reviews 에 대하여 k=1000 으로 설정하여 spherical k-means 를 학습한 뒤, 위의 proportion keywords 함수를 이용하여 군집 레이블을 추출하였습니다. 아래는 5 개 군집의 예시입니다.
 
 <table>
   <colgroup>
