@@ -16,22 +16,26 @@ soyclustering 은 이를 위해 centroid vectors 의 pairwise distance matrix �
 
 토크나이징이 되어 있는 matrix market 형식의 파일을 읽습니다. Doc2Vec 과 같은 distributed representation 에 대해서도 spherical k-means 는 작동하지만, cluster labeling algorithm 은 bag-of-words model 에서만 작동합니다.
 
-    from scipy.io import mmread
-    x = mmread(mm_file).tocsr()
+```python
+from scipy.io import mmread
+x = mmread(mm_file).tocsr()
+```
 
 구현된 spherical k-means 는 아래처럼 이용할 수 있습니다. init='similar_cut' 은 고차원 벡터에서 효율적으로 작동하는 initializer 입니다. 또한 centroid 의 sparsity 를 유지하기 위해 minimum_df 방법을 이용할 수 있습니다. 그 외의 interface 는 scikit-learn 의 k-means 와 동일합니다. fit_predict 를 통하여 군집화 결과의 labels 를 얻을 수 있습니다.
 
-    from soyclustering import SphericalKMeans
-    spherical_kmeans = SphericalKMeans(
-        n_clusters=1000,
-        max_iter=10,
-        verbose=1,
-        init='similar_cut',
-        sparsity='minimum_df', 
-        minimum_df_factor=0.05
-    )
+```python
+from soyclustering import SphericalKMeans
+spherical_kmeans = SphericalKMeans(
+    n_clusters=1000,
+    max_iter=10,
+    verbose=1,
+    init='similar_cut',
+    sparsity='minimum_df', 
+    minimum_df_factor=0.05
+)
 
-    labels = spherical_kmeans.fit_predict(x)
+labels = spherical_kmeans.fit_predict(x)
+```
 
 Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시간과 centroid vectors 의 sparsity 가 출력됩니다.
 
@@ -49,11 +53,13 @@ Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시
 
 군집화 결과의 해석을 위하여 cluster labeling 을 수행합니다. soyclustering 이 제공하는 proportion keywords 함수는 keyword extraction 방법에 기반하여 각 군집의 키워드를 추출합니다. input arguments 로 군집화 결과 얻는 cluster centroid vectors 와 list of str 형식으로 이뤄진 vocab list 가 필요합니다. 또한 각 군집의 크기를 측정할 수 있는 labels 를 입력해야 합니다.
 
-    from soyclustering import proportion_keywords
-    
-    centers = spherical_kmeans.cluster_centers_
-    idx2vocab = ['list', 'of', 'str', 'vocab']
-    keywords = proportion_keywords(centers, labels, index2word=idx2vocab)
+```python
+from soyclustering import proportion_keywords
+
+centers = spherical_kmeans.cluster_centers_
+idx2vocab = ['list', 'of', 'str', 'vocab']
+keywords = proportion_keywords(centers, labels, index2word=idx2vocab)
+```
 
 1,226k 개의 문서로 이뤄진 IMDB reviews 에 대하여 k=1000 으로 설정하여 spherical k-means 를 학습한 뒤, 위의 proportion keywords 함수를 이용하여 군집 레이블을 추출하였습니다. 아래는 5 개 군집의 예시입니다.
 
@@ -94,17 +100,21 @@ Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시
 
 예상하는 것보다 큰 k 를 설정하면 몇 개의 군집들은 비슷한 centroid vectors 를 지닙니다. 이러한 군집이 존재하는지 확인하기 위해서는 pairwise distance matrix 를 살펴봐야 합니다.
 
-    from soyclustering import visualize_pairwise_distance
+```python
+from soyclustering import visualize_pairwise_distance
 
-    # visualize pairwise distance matrix
-    fig = visualize_pairwise_distance(centers, max_dist=.7, sort=True)
+# visualize pairwise distance matrix
+fig = visualize_pairwise_distance(centers, max_dist=.7, sort=True)
+```
 
 그리고 비슷한 군집들이 있다면 이를 하나의 군집으로 묶을 수 있습니다.
 
-    from soyclustering import merge_close_clusters
+```python
+from soyclustering import merge_close_clusters
 
-    group_centers, groups = merge_close_clusters(centers, labels, max_dist=.5)
-    fig = visualize_pairwise_distance(group_centers, max_dist=.7, sort=True)
+group_centers, groups = merge_close_clusters(centers, labels, max_dist=.5)
+fig = visualize_pairwise_distance(group_centers, max_dist=.7, sort=True)
+```
 
 그 뒤 다시 groups 된 centroid vectors 를 살펴보면 아래의 그림과 같습니다. diagonal elements 만 진한 색이 띈다면 각각의 군집이 서로 상이하다는 의미입니다.
 
@@ -114,8 +124,10 @@ merge_close_clusters 함수는 centroids 가 주어지면 Cosine distance 가 �
 
 groups 는 각 군집이 어떤 그룹으로 묶였는지 nested list 로 표현됩니다.
 
-    for group in groups:
-        print(group)
+```python
+for group in groups:
+    print(group)
+```
 
     [0, 19, 57, 68, 88, 115, 202, 223, 229, 237]
     [1]
