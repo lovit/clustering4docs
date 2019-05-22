@@ -330,7 +330,8 @@ def _k_init(X, n_clusters, random_state):
         centers[c] = X[candidate_ids].toarray()
         
         # Compute distances to center candidates
-        closest_dist_sq = cosine_distances(X[candidate_ids,:], X)[0] ** 2
+        new_dist_sq = cosine_distances(X[candidate_ids,:], X)[0] ** 2
+        closest_dist_sq = np.minimum(new_dist_sq, closest_dist_sq)
         current_pot = closest_dist_sq.sum()
 
     return centers
