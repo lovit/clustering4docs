@@ -1,8 +1,43 @@
 import numpy as np
 
 def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
-                        candidates_topk=300, index2word=None, passwords=None):
-    
+    candidates_topk=300, index2word=None, passwords=None):
+    """
+    Arguments
+    ---------
+    centers : numpy.ndarray
+        Shape = (k, p)
+        k : num of clusters
+        p : num of features
+    labels : numpy.ndarray or None
+        Shape = (n,)
+        n : num of documents in the dataset
+        It is used as cluster size weight. If the value is None,
+        it assumes that all size of clusters are equal.
+    min_score : float
+        0 < min_score < 1
+        Minimum keyword score. The words corresponding less than the score will be
+        removed from set of keywords.
+    topk : int
+        The number of keywords
+    candidates_topk : int
+        The number of keyword candidates
+    index2word : list of str or None
+        If the value is not None, the length must be p (num of features)
+        If the value is None, it returns keywords as integer index
+    passwords : set of str or None
+        The set of words that will be removed from keyword set by force
+
+    Returns
+    -------
+    keywords_in_clusters : nested list
+        The length of list equals with num of clusters
+        [[(keyword, score), (keyword, score), ... ],
+         [(keyword, score), (keyword, score), ... ]
+         ...
+        ]
+    """
+
     l1_normalize = lambda x:x/x.sum()
 
     index_type = passwords and isinstance(list(passwords)[0], int)
