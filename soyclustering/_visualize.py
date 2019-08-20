@@ -8,7 +8,36 @@ import numpy as np
 from ._postprocess import _grouping_with_pdist
 
 def visualize_pairwise_distance(centers, labels=None,
-    max_dist=0.7, sort=False, use_bokeh=False, **kargs):
+    max_dist=0.7, sort=False, use_bokeh=False, show=True, **kargs):
+    """
+    Arguments
+    ---------
+    centers : numpy.ndarray
+        Shape = (k, p)
+        k : num of clusters
+        p : num of features
+    labels : numpy.ndarray or None
+        Shape = (n,)
+        n : num of documents in the dataset
+        It is used as cluster size weight. If the value is None,
+        it assumes that all size of clusters are equal.
+    max_dist : float
+        Maximum Cosine distance between base cluster and other clusters.
+        The smaller the value, it groups closer clusters to a group.
+    sort : Boolean
+        It True, it first groups nearby clusters into one group
+        then draw pairwise distance matrix
+    use_bokeh : Boolean
+        In this version, this argument is ignored.
+    show : Boolean
+        If True, it shows the figure of pairwise distance and returns figure.
+        Else, it just returns the figure.
+
+    Returns
+    -------
+    figure : matplotlib.pyplot.figure
+        Figure of pairwise distance
+    """
 
     n_clusters = centers.shape[0]
 
@@ -42,7 +71,7 @@ def visualize_pairwise_distance(centers, labels=None,
     else:
         pdist_revised = pdist
 
-    return pairwise_distance_to_matplotlib_figure(pdist_revised)
+    return pairwise_distance_to_matplotlib_figure(pdist_revised, show=show)
 
 def pairwise_distance_to_bokeh_heatmap(pdist, cluster_idx, palettes=None):
 
@@ -101,6 +130,30 @@ def pairwise_distance_to_bokeh_heatmap(pdist, cluster_idx, palettes=None):
 def pairwise_distance_to_matplotlib_figure(pdist, title=None,
     figsize=(15,15), cmap='gray', clim=None, dpi=50,
     facecolor=None, edgecolor=None, frameon=True, show=True):
+    """
+    pdist : numpy.ndarray
+        Pairwise distance matrix. Shape is (k, k) when k is num of clusters
+    title : str or None
+        The title of the figure
+    figsize : tuple of int
+        Size of the figure. Default is (15,15)
+    cmap : str
+        Color map in matplotlib. Default is gray
+    clim : tuple of int or None
+        Color limit in matplotlib. 
+    dpi : int
+        DPI of the figure
+    facecolor : tuple of float or None
+        RBG color of background
+        For example (0.15, 0.5, 0.5)
+    edgecolor : tuple of float or None
+        RBG color of edge for the figure
+        For example (0.15, 0.5, 0.5)
+    frameon : Boolean
+    show : Boolean
+        If True, it shows the figure of pairwise distance and returns figure.
+        Else, it just returns the figure.
+    """
 
     n_clusters = pdist.shape[0]
 
