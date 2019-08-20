@@ -20,13 +20,17 @@ def inner_product(X, Y):
 
 def check_sparsity(x):
     """
+    It calculates sparsity of centroid vectors
+
     Argument
     --------
-    x : scipy.sparse.csr_matrix
+    x : numpy.ndarray
 
     Returns
     -------
     sparsity : float
         1 - proportion of nonzero elements
     """
-    return 1 - x.nnz / (x.shape[0] * x.shape[1])
+    n,m = x.shape
+    return sum(len(np.where(x[c] != 0)[0]) for c in range(n)) / (n*m)
+
