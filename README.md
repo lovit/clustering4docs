@@ -39,17 +39,19 @@ labels = spherical_kmeans.fit_predict(x)
 
 Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시간과 centroid vectors 의 sparsity 가 출력됩니다.
 
-    initialization_time=1.218108 sec, sparsity=0.00796
-    n_iter=1, changed=29969, inertia=15323.440, iter_time=4.435 sec, sparsity=0.116
-    n_iter=2, changed=5062, inertia=11127.620, iter_time=4.466 sec, sparsity=0.108
-    n_iter=3, changed=2179, inertia=10675.314, iter_time=4.463 sec, sparsity=0.105
-    n_iter=4, changed=1040, inertia=10491.637, iter_time=4.449 sec, sparsity=0.103
-    n_iter=5, changed=487, inertia=10423.503, iter_time=4.437 sec, sparsity=0.103
-    n_iter=6, changed=297, inertia=10392.490, iter_time=4.483 sec, sparsity=0.102
-    n_iter=7, changed=178, inertia=10373.646, iter_time=4.442 sec, sparsity=0.102
-    n_iter=8, changed=119, inertia=10362.625, iter_time=4.449 sec, sparsity=0.102
-    n_iter=9, changed=78, inertia=10355.905, iter_time=4.438 sec, sparsity=0.102
-    n_iter=10, changed=80, inertia=10350.703, iter_time=4.452 sec, sparsity=0.102
+```
+initialization_time=1.218108 sec, sparsity=0.00796
+n_iter=1, changed=29969, inertia=15323.440, iter_time=4.435 sec, sparsity=0.116
+n_iter=2, changed=5062, inertia=11127.620, iter_time=4.466 sec, sparsity=0.108
+n_iter=3, changed=2179, inertia=10675.314, iter_time=4.463 sec, sparsity=0.105
+n_iter=4, changed=1040, inertia=10491.637, iter_time=4.449 sec, sparsity=0.103
+n_iter=5, changed=487, inertia=10423.503, iter_time=4.437 sec, sparsity=0.103
+n_iter=6, changed=297, inertia=10392.490, iter_time=4.483 sec, sparsity=0.102
+n_iter=7, changed=178, inertia=10373.646, iter_time=4.442 sec, sparsity=0.102
+n_iter=8, changed=119, inertia=10362.625, iter_time=4.449 sec, sparsity=0.102
+n_iter=9, changed=78, inertia=10355.905, iter_time=4.438 sec, sparsity=0.102
+n_iter=10, changed=80, inertia=10350.703, iter_time=4.452 sec, sparsity=0.102
+```
 
 군집화 결과의 해석을 위하여 cluster labeling 을 수행합니다. soyclustering 이 제공하는 proportion keywords 함수는 keyword extraction 방법에 기반하여 각 군집의 키워드를 추출합니다. input arguments 로 군집화 결과 얻는 cluster centroid vectors 와 list of str 형식으로 이뤄진 vocab list 가 필요합니다. 또한 각 군집의 크기를 측정할 수 있는 labels 를 입력해야 합니다.
 
@@ -129,16 +131,18 @@ for group in groups:
     print(group)
 ```
 
-    [0, 19, 57, 68, 88, 115, 202, 223, 229, 237]
-    [1]
-    [2]
-    [3, 4, 5, 8, 12, 14, 16, 18, 20, 22, 26, 28, ...]
-    [6, 25, 29, 32, 37, 43, 45, 48, 53, 56, 65, ...]
-    [7, 17, 34, 41, 52, 59, 76, 79, 84, 87, 93, ...]
-    [9, 15, 24, 47, 51, 97]
-    [10, 100, 139]
-    [11, 23, 251]
-    ...
+```
+[0, 19, 57, 68, 88, 115, 202, 223, 229, 237]
+[1]
+[2]
+[3, 4, 5, 8, 12, 14, 16, 18, 20, 22, 26, 28, ...]
+[6, 25, 29, 32, 37, 43, 45, 48, 53, 56, 65, ...]
+[7, 17, 34, 41, 52, 59, 76, 79, 84, 87, 93, ...]
+[9, 15, 24, 47, 51, 97]
+[10, 100, 139]
+[11, 23, 251]
+...
+```
 
 ## See more
 

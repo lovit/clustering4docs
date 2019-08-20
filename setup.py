@@ -12,6 +12,7 @@ setup(
     url='https://github.com/lovit/clustering4docs',
     description="Python library for document clustering",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     install_requires=["numpy>=1.1"],
     keywords = ['document clustering', 'clustering labeling'],
     packages=find_packages()
