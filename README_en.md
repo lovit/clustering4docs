@@ -2,34 +2,34 @@
 
 This package is implementation of **Improving spherical k-means for document clustering: Fast initialization, sparse centroid projection, and efficient cluster labeling** (Kim et al., 2020).
 
-Cosine is more appropriate than Euclidean to measure the distance between two documents which are represented with high-dimensional (or sometimes, sparse) vectors.
-However, scikit-learn k-means package only provides Euclidean based k-means not yet.
-In addition, labeling clusters is very helpful to interpret the clustering results.
+Cosine is more effective than Euclidean when measuring the distance between two high-dimensional (or sometimes, sparse) documents vectors.
+However, scikit-learn k-means package provides only Euclidean based k-means.
+Additionally, labeling clusters can be very helpful for interpreting the clustering results.
 
 Spherical k-means works well both with sparse vector representation such as Bag-of-Words model or distributed representation such as Doc2Vec or other document embedding methods.
 In lower dimensional vector space, Silhouette score method is useful to define the number of clusters (`k`).
-However Silhouette score method does not works well anymore in high-dimensional vector space such as Bag-of-Words Models and Doc2Vec.
-One of heuristic methods to define the cluster numbers is to train k-means with large `k` first and then merge similar ones.
-The heuristic method is also useful to prevent Uniform effect which is the phenomenon that the size of all clusters leads similar.
+However Silhouette score method does not work well in a high-dimensional vector space such as Bag-of-Words and Doc2Vec model space.
+One of the heuristic methods to define the number of clusters is to train k-means with large `k` first and subsequently merge similar ones.
+This method is also useful for preventing the Uniform Effect, which causes the size of all clusters to be similar.
 
-`soyclustering` provides Spherical k-means (k-means which uses Cosine as distance metric) and keyword extraction based clustering labeling function.
-And more, the function visualizing pairwise distances between centroids will help you to check whether redundant clusters exist and merging similar clusters does you to remove the redundant ones.
-Also `soyclustering` provide fast initialization method which is proper to high-dimensional vector space.
-The method initializes the k-means initial centroids as thousands of times when the data is large.
+`soyclustering` provides Spherical k-means (k-means which uses Cosine distance as a distance metric) and keyword extraction-based clustering labeling function.
+Furthermore, the function for visualizing pairwise distances between centroids will help you to check whether redundant clusters exist, allowing you to remove redundant clusters by merging them.
+`soyclustering` also provides a fast initialization method that is effective in a high-dimensional vector space.
+When the size of the input data is large, the initialization method sets k to be 1000.
 
 > Add initialization comparison figure
 
 
 ## Usage
 
-토크나이징이 되어 있는 matrix market 형식의 파일을 읽습니다. Doc2Vec 과 같은 distributed representation 에 대해서도 spherical k-means 는 작동하지만, cluster labeling algorithm 은 bag-of-words model 에서만 작동합니다.
+You can read a matrix market file as follows. Note that the file must include tokenized outputs. Although the spherical k-means function can be used for inputs in distributed representation such as Doc2Vec, our cluster labeling algorithm works only for Bag-of-Words model.
 
 ```python
 from scipy.io import mmread
 x = mmread(mm_file).tocsr()
 ```
 
-구현된 spherical k-means 는 아래처럼 이용할 수 있습니다. init='similar_cut' 은 고차원 벡터에서 효율적으로 작동하는 initializer 입니다. 또한 centroid 의 sparsity 를 유지하기 위해 minimum_df 방법을 이용할 수 있습니다. 그 외의 interface 는 scikit-learn 의 k-means 와 동일합니다. fit_predict 를 통하여 군집화 결과의 labels 를 얻을 수 있습니다.
+Sperical k-means can be used as follows. init='similar_cut' indicates our initializer that is effective in a high-dimensional vector space. If you want to preserve the sparsity of the centroid vector, you can set minimum_df_factor. Other interfaces are similar to those of scikit-learn k-means function. With fit_predict, you can retrieve the labels from the clustering result.
 
 ```python
 from soyclustering import SphericalKMeans
@@ -45,7 +45,7 @@ spherical_kmeans = SphericalKMeans(
 labels = spherical_kmeans.fit_predict(x)
 ```
 
-Verbose mode 일 때에는 initialization 과 매 iteration 에서의 계산 시간과 centroid vectors 의 sparsity 가 출력됩니다.
+When the verbose mode is set, computation speed and the level of sparsity during the initizalition and each iteration is printed.
 
 ```
 initialization_time=1.218108 sec, sparsity=0.00796
@@ -61,7 +61,7 @@ n_iter=9, changed=78, inertia=10355.905, iter_time=4.438 sec, sparsity=0.102
 n_iter=10, changed=80, inertia=10350.703, iter_time=4.452 sec, sparsity=0.102
 ```
 
-군집화 결과의 해석을 위하여 cluster labeling 을 수행합니다. soyclustering 이 제공하는 proportion keywords 함수는 keyword extraction 방법에 기반하여 각 군집의 키워드를 추출합니다. input arguments 로 군집화 결과 얻는 cluster centroid vectors 와 list of str 형식으로 이뤄진 vocab list 가 필요합니다. 또한 각 군집의 크기를 측정할 수 있는 labels 를 입력해야 합니다.
+Cluster labeling can be used to intrepret the clustering results. The `proportion_keywords` function of `soyclustering` uses a keyword extraction-based method to return keywords describing each cluster. For its input arguments, you need to provide cluster centroid vectors, a list of vocabularies (as str) and labels.
 
 ```python
 from soyclustering import proportion_keywords
@@ -71,7 +71,7 @@ idx2vocab = ['list', 'of', 'str', 'vocab']
 keywords = proportion_keywords(centers, labels, index2word=idx2vocab)
 ```
 
-The table in below is the results of cluster labels from trained k-means with k=1,000 and 1,226K documents.
+The table in below is the results of cluster labels from a trained k-means with k=1,000 and 1.2M documents.
 
 <table>
   <colgroup>
@@ -108,7 +108,7 @@ The table in below is the results of cluster labels from trained k-means with k=
   </tbody>
 </table>
 
-Setting `k` as large numbers leads redundant clusters. To find them, we have to examine carefully the pairwise distance between clusters.
+Setting a large `k` leads to redundant clusters. You can identify these redundant clusters by carefully examining the pairwise distance between the clusters.
 
 ```python
 from soyclustering import visualize_pairwise_distance
@@ -117,7 +117,7 @@ from soyclustering import visualize_pairwise_distance
 fig = visualize_pairwise_distance(centers, max_dist=.7, sort=True)
 ```
 
-If you find the redundant ones, you can easily merge them to one cluster.
+If you find redundant clusters, you can easily merge them into a single cluster.
 
 ```python
 from soyclustering import merge_close_clusters
@@ -126,13 +126,13 @@ group_centers, groups = merge_close_clusters(centers, labels, max_dist=.5)
 fig = visualize_pairwise_distance(group_centers, max_dist=.7, sort=True)
 ```
 
-After grouping, you can see the size of dark squares at diagonal reduces. It means that some redundant clusters are really merged.
+After merging, you can check the size of dark squares in the diagonal entries of the pairwise distance matrix. If the redundant clusters are indeed successfully merged, the number of dark sqaures in the diagonal entries should have been reduced.
 
 ![](https://github.com/lovit/clustering4docs/blob/master/assets/merge_similar_clusters.png)
 
-The function `merge_close_clusters` groups the similar clusters of which distance between them is smaller than `max_dist` together.
-The centroid of new clsuter is weighted average of the centroid of merged clusters.
-You can find the cluster indices before and after the merging similar clusters at variable `groups`.
+The function `merge_close_clusters` groups similar clusters, in which the distance between them is smaller than `max_dist`.
+The centroid of the new cluster is a weighted average of original centroid vectors.
+From the variable `groups`, you can return the cluster indices prior and after merging.
 
 ```python
 for group in groups:
