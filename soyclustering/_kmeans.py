@@ -110,7 +110,7 @@ class SphericalKMeans:
     def __init__(self, n_clusters=8, init='similar_cut', sparsity=None,
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
                  debug_directory=None, algorithm=None, **kargs):
-        
+
         self.n_clusters = n_clusters
         self.init = init
         self.sparsity = sparsity
@@ -121,7 +121,7 @@ class SphericalKMeans:
         self.debug_directory = debug_directory
         self.algorithm = algorithm
         self.params = kargs
-    
+
     def _check_fit_data(self, X):
         """Verify that the number of samples given is larger than k
         Verify input data x is sparse matrix
@@ -133,52 +133,51 @@ class SphericalKMeans:
         if not sp.issparse(X):
             raise ValueError("Input must be instance of scipy.sparse.csr_matrix")
         return X
-    
+
     def fit(self, X, y=None):
         """Compute k-means clustering.
+
         Parameters
         ----------
-        X : array-like or sparse matrix, shape=(n_samples, n_features)
-            Training instances to cluster.
+        X : scipy.sparse.csr_matrix, shape=(n_samples, n_features)
+            Training instances
         y : Ignored
         """
         random_state = check_random_state(self.random_state)
         X = self._check_fit_data(X)
-        
+
         self.cluster_centers_, self.labels_, self.inertia_, = \
             k_means(
-                X, n_clusters=self.n_clusters, init=self.init, 
+                X, n_clusters=self.n_clusters, init=self.init,
                 sparsity=self.sparsity, max_iter=self.max_iter,
-                verbose=self.verbose, tol=self.tol, random_state=random_state, 
+                verbose=self.verbose, tol=self.tol, random_state=random_state,
                 debug_directory=self.debug_directory, algorithm=self.algorithm,
                 **self.params
             )
         return self
-    
+
     def fit_predict(self, X, y=None):
         """Compute cluster centers and predict cluster index for each sample.
-        
-        Convenience method; equivalent to calling fit(X) followed by
-        predict(X).
-        
+
+        Convenience method; equivalent to calling `fit(X)` followed by `predict(X)`.
+
         Parameters
         ----------
-        X : sparse matrix, shape = [n_samples, n_features]
-            New data to transform.
+        X : scipy.sparse.csr_matrix, shape = (n_samples, n_features)
+            New data to be assigned to the closest cluster.
         y : Ignored
-        
+
         Returns
         -------
-        labels : array, shape [n_samples,]
+        labels : array, shape = (n_samples,)
             Index of the cluster each sample belongs to.
         """
         return self.fit(X).labels_
-    
+
     def transform(self, X):
         """Transform X to a cluster-distance space.
-        In the new space, each dimension is the distance to the cluster
-        centers.  Note that even if X is sparse, the array returned by
-        `transform` will typically be dense.
+        In the new space, each dimension is the distance to the cluster centers.
+        Note that even if X is sparse, the array returned by `transform` will typically be dense.
 
         Parameters
         ----------
@@ -197,15 +196,13 @@ class SphericalKMeans:
 
         X = self._check_fit_data(X)
         return self._transform(X)
-    
+
     def _transform(self, X):
         """guts of transform method; no input validation"""
         return cosine_distances(X, self.cluster_centers_)
 
 def _tolerance(X, tol):
-    """Modified.
-    The number of points which are re-assigned to other cluster. 
-    """
+    """The minimum number of points which are re-assigned to other cluster."""
     return max(1, int(X.shape[0] * tol))
 
 def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
@@ -220,34 +217,34 @@ def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
 
     X = as_float_array(X)
     tol = _tolerance(X, tol)
-    
+
     labels, inertia, centers, debug_header = None, None, None, None
-    
+
     if debug_directory:
         # Create debug header
         strf_now = datetime.datetime.now()
         debug_header = str(strf_now).replace(':','-').replace(' ','_').split('.')[0]
-        
+
         # Check debug_directory
         if not os.path.exists(debug_directory):
             os.makedirs(debug_directory)
             s = datetime.datetime.now()
-            
+
     # For a single thread, run a k-means once
     centers, labels, inertia, n_iter_ = kmeans_single(
         X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
-        verbose=verbose, tol=tol, random_state=random_state, 
+        verbose=verbose, tol=tol, random_state=random_state,
         debug_directory = debug_directory, debug_header=debug_header,
         algorithm=algorithm, **kargs)
 
     # parallelisation of k-means runs
     # TODO
-    
+
     return centers, labels, inertia
 
 def initialize(X, n_clusters, init, random_state, **kargs):
     n_samples = X.shape[0]
-    
+
     # Random selection
     if isinstance(init, str) and init == 'random':
         seeds = random_state.permutation(n_samples)[:n_clusters]
@@ -256,7 +253,7 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     elif hasattr(init, '__array__'):
         centers = np.array(init, dtype=X.dtype)
         if centers.shape[0] != n_clusters:
-            raise ValueError('the number of customized initial points ' 
+            raise ValueError('the number of customized initial points '
                              'should be same with n_clusters parameter'
                             )
     elif callable(init):
@@ -279,11 +276,11 @@ def initialize(X, n_clusters, init, random_state, **kargs):
 
 def _k_init(X, n_clusters, random_state):
     """Init n_clusters seeds according to k-means++
-    It modified for Spherical k-means 
-    
+    It modified for Spherical k-means
+
     Parameters
     -----------
-    X : sparse matrix, shape (n_samples, n_features)        
+    X : sparse matrix, shape (n_samples, n_features)
     n_clusters : integer
         The number of seeds to choose
     random_state : numpy.RandomState
@@ -298,7 +295,7 @@ def _k_init(X, n_clusters, random_state):
     Version ported from http://www.stanford.edu/~darthur/kMeansppTest.zip,
     which is the implementation used in the aforementioned paper.
     """
-    
+
     n_samples, n_features = X.shape
 
     centers = np.empty((n_clusters, n_features), dtype=X.dtype)
@@ -308,7 +305,7 @@ def _k_init(X, n_clusters, random_state):
     # specific results for other than mentioning in the conclusion
     # that it helped.
     n_local_trials = 2 + int(np.log(n_clusters))
-        
+
     # Pick first center randomly
     center_id = random_state.randint(n_samples)
     centers[0] = X[center_id].toarray()
@@ -326,7 +323,7 @@ def _k_init(X, n_clusters, random_state):
                                         rand_vals)
 
         centers[c] = X[candidate_ids].toarray()
-        
+
         # Compute distances to center candidates
         new_dist_sq = cosine_distances(X[candidate_ids,:], X)[0] ** 2
         closest_dist_sq = np.minimum(new_dist_sq, closest_dist_sq)
@@ -335,33 +332,33 @@ def _k_init(X, n_clusters, random_state):
     return centers
 
 def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_factor=3):
-    
+
     n_data, n_features = X.shape
     centers = np.empty((n_clusters, n_features), dtype=X.dtype)
-    
+
     n_subsamples = min(n_data, int(sample_factor * n_clusters))
     permutation = np.random.permutation(n_data)
     X_sub = X[permutation[:n_subsamples]]
     n_samples = X_sub.shape[0]
-    
+
     # Pick first center randomly
     center_id = random_state.randint(n_samples)
     center_set = {center_id}
     centers[0] = X[center_id].toarray()
     candidates = np.asarray(range(n_samples))
-    
+
     # Pick the remaining n_clusters-1 points
-    for c in range(1, n_clusters):        
+    for c in range(1, n_clusters):
         closest_dist = inner_product(X_sub[center_id,:], X_sub[candidates,:].T)
 
         # Remove center similar points from candidates
         remains = np.where(closest_dist.todense() < max_similar)[1]
         if len(remains) == 0:
             break
-            
+
         np.random.shuffle(remains)
         center_id = candidates[remains[0]]
-        
+
         centers[c] = X_sub[center_id].toarray()
         candidates = candidates[remains[1:]]
         center_set.add(center_id)
@@ -401,7 +398,7 @@ def kmeans_single(X, n_clusters, max_iter=10, init='similar_cult', sparsity=None
 
     if verbose:
         print(initial_state)
-        
+
     if debug_directory:
         log_path = '{}/{}_logs.txt'.format(debug_directory, debug_header)
         with open(log_path, 'w', encoding='utf-8') as f:
@@ -415,26 +412,26 @@ def kmeans_single(X, n_clusters, max_iter=10, init='similar_cult', sparsity=None
 
 def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter, 
                            verbose, tol, debug_directory, debug_header, **kargs):
-    
+
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
     debug_label_on = kargs.get('debug_label_on', True)
     debug_centroid_on = kargs.get('debug_centroid_on', True)
-    
+
     for n_iter_ in range(1, max_iter + 1):
-        
+
         _iter_time = time.time()
 
         labels, distances = pairwise_distances_argmin_min(X, centers, metric='cosine')
         centers = _update(X, labels, distances, n_clusters)
         inertia = distances.sum()
-        
+
         if n_iter_ == 0:
             n_diff = n_samples
         else:
             diff = np.where((labels_old - labels) != 0)[0]
             n_diff = len(diff)
-        
+
         labels_old = labels
 
         if isinstance(sparsity, str) and sparsity == 'sculley':
@@ -466,7 +463,7 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
                 with open(label_path, 'a', encoding='utf-8') as f:
                     for label in labels:
                         f.write('{}\n'.format(label))
-            
+
             # Temporal cluster_centroid
             if debug_centroid_on:
                 center_path = '{}/{}_centroids_iter{}.csv'.format(
@@ -483,23 +480,24 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
 
     return centers, labels, inertia, n_iter_
 
+
 def _update(X, labels, distances, n_clusters):
-    
+
     n_featuers = X.shape[1]
     centers = np.zeros((n_clusters, n_featuers))
     
     n_samples_in_cluster = np.bincount(labels, minlength=n_clusters)
     empty_clusters = np.where(n_samples_in_cluster == 0)[0]
     n_empty_clusters = empty_clusters.shape[0]
-    
+
     data = X.data
     indices = X.indices
     indptr = X.indptr
-    
+
     if n_empty_clusters > 0:
         # find points to reassign empty clusters to
         far_from_centers = distances.argsort()[::-1][:n_empty_clusters]
-        
+
         # reassign labels to empty clusters
         for i in range(n_empty_clusters):
             centers[empty_clusters[i]] = X[far_from_centers[i]].toarray()
@@ -511,10 +509,11 @@ def _update(X, labels, distances, n_clusters):
         for ind in range(indptr[i], indptr[i + 1]):
             j = indices[ind]
             centers[curr_label, j] += data[ind]
-    
+
     # L2 normalization
     centers = normalize(centers)
     return centers
+
 
 def _sculley_projections(centers, radius, epsilon):
     n_clusters = centers.shape[0]
@@ -522,38 +521,44 @@ def _sculley_projections(centers, radius, epsilon):
         centers[c] = _sculley_projection(centers[c], radius, epsilon)
     centers = normalize(centers)
     return centers
-    
+
+
 def _sculley_projection(center, radius, epsilon):
-    l1_norm = lambda x:abs(x).sum()
-    inf_norm = lambda x:abs(x).max()
-    
+    def l1_norm(x):
+        return abs(x).sum()
+
+    def inf_norm(x):
+        return abs(x).max()
+
     upper, lower = inf_norm(center), 0
     current = l1_norm(center)
-    
+
     larger_than = radius * (1 + epsilon)
     smaller_than = radius
-    
+
     _n_iter = 0
     theta = 0
-    
+
     while current > larger_than or current < smaller_than:
-        theta = (upper + lower) / 2.0 # Get L1 value for this theta
+        theta = (upper + lower) / 2.0  # Get L1 value for this theta
         current = sum([v for v in (abs(center) - theta) if v > 0])
         if current <= radius:
             upper = theta
         else:
             lower = theta
-    
+
         # for safety, preventing infinite loops
         _n_iter += 1
-        if _n_iter > 10000: break
+        if _n_iter > 10000:
+            break
         if upper - lower < 0.001:
             break
-    
+
     signs = np.sign(center)
     projection = [max(0, ci) for ci in (abs(center) - theta)]
     projection = np.asarray([ci * signs[i] if ci > 0 else 0 for i, ci in enumerate(projection)])
     return projection
+
 
 def L1_projection(v, z):
     m = v.copy()
@@ -562,22 +567,21 @@ def L1_projection(v, z):
 
     pho = 0
     for j, mj in enumerate(m):
-        t = mj - (m[:j+1].sum() - z) / (1+j)
+        t = mj - (m[:j + 1].sum() - z) / (1 + j)
         if t < 0:
             break
         pho = j
 
-    theta = (m[:pho+1].sum() - z) / (pho+1)
-    v_ = np.asarray([max(vi-theta, 0) for vi in v])
+    theta = (m[:pho + 1].sum() - z) / (pho + 1)
+    v_ = np.asarray([max(vi - theta, 0) for vi in v])
     return v_
+
 
 def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
     n_clusters = centers.shape[0]
-    n_features = X.shape[1]
     centers_ = sp.csr_matrix(centers.copy())
 
     data = centers_.data
-    indices = centers_.indices
     indptr = centers_.indptr
 
     n_samples_in_cluster = np.bincount(labels_, minlength=n_clusters)
@@ -589,6 +593,7 @@ def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
     centers_ = centers_.todense()
     centers_ = normalize(centers_)
     return centers_
+
 
 def _minimum_df_projection(center, min_value):
     center[[idx for idx, v in enumerate(center) if v**2 < min_value]] = 0
