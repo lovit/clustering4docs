@@ -24,10 +24,10 @@ def test_kmeans(test_data):
     n_clusters = 100
     print('\nk-means test with various configuration')
 
-    configs = [('k-means++', None), ('similar_cut', None)]
+    configs = [('k-means++', None), ('similar_cut', None), ('similar_cut', 'minimum_df')]
     for config in configs:
         init, sparsity = config
-        print(f'\nConfig\n  - init={init}\n  - sparsity={sparsity}')
+        print(f'\nConfig\n  - init: {init}\n  - sparsity: {sparsity}')
         kmeans = SphericalKMeans(n_clusters=n_clusters, init=init,
             sparsity=sparsity, max_iter=5, tol=0.0001, verbose = True, random_state=0)
         labels = kmeans.fit_predict(x)
