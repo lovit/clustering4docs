@@ -25,20 +25,21 @@ class SphericalKMeans:
     Parameters
     ----------
     n_clusters : int, optional, default: 8
-        The number of clusters to form as well as the number of
-        centroids to generate.
-    init : {'k-means++', 'random' or an ndarray}
-        Method for initialization, defaults to 'k-means++':
-        'k-means++' : selects initial cluster centers for k-mean
-        clustering in a smart way to speed up convergence. See section
-        Notes in k_init for more details.
-        'random': choose k observations (rows) at random from data for
-        the initial centroids.
-        If an ndarray is passed, it should be of shape (n_clusters, n_features)
-        and gives the initial centers.    
+        The number of clusters to form as well as the number of centroids to generate.
+    init : str or numpy.ndarray, default
+        One of ['similar_cut', 'k-means++', 'random'] or an numpy.ndarray
+        Method for initialization, defaults to 'k-means++'
+        - 'similar_cut'
+          It is an k-means initialization method for high-dimensional vector space + Cosine.
+          See `Improving spherical k-means for document clustering (Kim et al., 2020)` for detail.
+        - 'k-means++'
+          It selects initial cluster centers for k-mean clustering in a smart way to speed up convergence.
+          See https://en.wikipedia.org/wiki/K-means%2B%2B for detail.
+        - 'random'
+          choose k observations (rows) at random from data for the initial centroids.
+        - If an ndarray is passed, it should be of shape (n_clusters, n_features) and gives the initial centers.
     max_iter : int, default: 10
-        Maximum number of iterations of the k-means algorithm for a
-        single run. 
+        Maximum number of iterations of the k-means algorithm for a single run.
         It does not need large number. k-means algorithms converge fast.
     tol : float, default: 1e-4
         Relative tolerance with regards to inertia to declare convergence
@@ -49,12 +50,8 @@ class SphericalKMeans:
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
         by `np.random`.
-    n_jobs : int
-        To be implemented
     algorithm : str, default None
         Computation algorithm.
-    n_init : int.
-        Ignored
     sparsity: {'sculley' or 'minimum_df'}
         Method for preserving sparsity of centroids. 
         'sculley': L1 ball projection method. 
@@ -112,9 +109,7 @@ class SphericalKMeans:
     
     def __init__(self, n_clusters=8, init='similar_cut', sparsity=None,
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
-                 debug_directory=None, n_jobs=1, algorithm=None,
-                 n_init=1, **kargs
-                ):
+                 debug_directory=None, algorithm=None, **kargs):
         
         self.n_clusters = n_clusters
         self.init = init
@@ -124,7 +119,6 @@ class SphericalKMeans:
         self.verbose = verbose
         self.random_state = random_state
         self.debug_directory = debug_directory
-        self.n_jobs = n_jobs
         self.algorithm = algorithm
         self.params = kargs
     
@@ -156,8 +150,8 @@ class SphericalKMeans:
                 X, n_clusters=self.n_clusters, init=self.init, 
                 sparsity=self.sparsity, max_iter=self.max_iter,
                 verbose=self.verbose, tol=self.tol, random_state=random_state, 
-                debug_directory=self.debug_directory, n_jobs=self.n_jobs,
-                algorithm=self.algorithm, **self.params
+                debug_directory=self.debug_directory, algorithm=self.algorithm,
+                **self.params
             )
         return self
     
@@ -211,8 +205,7 @@ def _tolerance(X, tol):
 
 def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
             verbose=False, tol=1e-4, random_state=None, debug_directory=None,
-            n_jobs=1, algorithm=None, **kargs
-           ):
+            algorithm=None, **kargs):
 
     random_state = check_random_state(random_state)
 
