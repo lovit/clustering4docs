@@ -23,7 +23,7 @@ class SphericalKMeans:
     ----------
     n_clusters : int, optional, default: 8
         The number of clusters to form as well as the number of centroids to generate.
-    init : str or numpy.ndarray, default
+    init : str or numpy.ndarray, default: 'similar_cut'
         One of ['similar_cut', 'k-means++', 'random'] or an numpy.ndarray
         Method for initialization, defaults to 'k-means++'
         - 'similar_cut'
@@ -35,6 +35,20 @@ class SphericalKMeans:
         - 'random'
           choose k observations (rows) at random from data for the initial centroids.
         - If an ndarray is passed, it should be of shape (n_clusters, n_features) and gives the initial centers.
+    sparsity: str or None, default: None
+        One of ['sculley', 'minimum_df', None]
+        Method for preserving sparsity of centroids.
+        'sculley': L1 ball projection method.
+            Reference: David Sculley. Web-scale k-means clustering.
+            In Proceedings of international conference on World wide web,2010.
+            It requires two parameters `radius` and `epsilon`.
+            `radius`: default 10
+            `epsilon`: default 5
+        'minium_df': Pruning method. It drops elements to zero which lower
+            than beta / |DF(C)|. DF(C) is the document number of a cluster and
+            beta is constant parameter.
+            It requires one parameter `minimum_df_factor` a.k.a beta
+            `minimum_df_factor`: default 0.01
     max_iter : int, default: 10
         Maximum number of iterations of the k-means algorithm for a single run.
         It does not need large number. k-means algorithms converge fast.
@@ -46,30 +60,30 @@ class SphericalKMeans:
         If int, random_state is the seed used by the random number generator;
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    algorithm : str, default None
-        Computation algorithm.
-    sparsity: {'sculley' or 'minimum_df'}
-        Method for preserving sparsity of centroids.
-        'sculley': L1 ball projection method.
-            Reference: David Sculley. Web-scale k-means clustering.
-            In Proceedings of international conference on World wide web,2010.
-            It requires two parameters 'radius' and 'epsilon'.
-            'radius': default 10
-            'epsilon': default 5
-        'minium_df': Pruning method. It drops elements to zero which lower
-            than beta / |DF(C)|. DF(C) is the document number of a cluster and
-            beta is constant parameter.
-            It requires one parameter 'minimum_df_factor' a.k.a beta
-            'minimum_df_factor': default 0.01
+        by `numpy.random`.
     debug_directory: str, default: None
         When debug_directory is not None, model save three informations.
         First one is logs. It contains iteration time, loss, and sparsity.
-        Second one is temporal cluster labels for all iterations. If you don't
-        want to save temporal cluster labels, set "debug_label_on=False"
-        Third one is temporal cluster centroid vector for all iterations. If
-        you don't want to save temporal cluster labels, set
-        "debug_centroid_on=False"
+        Second one is temporal cluster labels for all iterations. Third one
+        is temporal cluster centroid vector for all iterations.
+    algorithm : str, default None
+        Computation algorithm.
+        Ignored
+    max_similar: float, default: 0.5
+        'similar_cut initializer' argument. The initializer select a point randomly,
+        and then remove points within distance <= `max_similar` from candidates of
+        next centroid. It works only when you set `init`='similar_cut'.
+    alpha: float, default: 3.0
+        'similar_cut initializer' argument. |candidates of initial centroids| / `n_clusters`
+        It works only when you set `init`='similar_cut'.
+        `alpha` must be larger than 1.0
+    radius: float, default: 10.0
+        'sculley L1 projection' argument. It works only when you set `sparsity`='sculley'
+    epsilon: float, default: 5.0
+        'sculley L1 projection' argument. It works only when you set `sparsity`='sculley'
+    minimum_df_factor: float, default: 0.01
+        'minimum df L1 projection' argument. It works only when you set `sparsity`='minimum_df'
+        `minimum_df_factor` must be real number between (0, 1)
 
     Attributes
     ----------
@@ -106,7 +120,8 @@ class SphericalKMeans:
 
     def __init__(self, n_clusters=8, init='similar_cut', sparsity=None,
                  max_iter=10, tol=0.0001, verbose=0, random_state=None,
-                 debug_directory=None, algorithm=None, **kargs):
+                 debug_directory=None, algorithm=None, max_similar=0.5,
+                 alpha=3, radius=10.0, epsilon=5.0, minimum_df_factor=0.01):
 
         self.n_clusters = n_clusters
         self.init = init
@@ -117,7 +132,17 @@ class SphericalKMeans:
         self.random_state = random_state
         self.debug_directory = debug_directory
         self.algorithm = algorithm
-        self.params = kargs
+
+        # similar-cut initialization
+        self.max_similar = max_similar
+        self.alpha = alpha
+
+        # sculley L1 projection
+        self.radius = radius
+        self.epsilon = epsilon
+
+        # minimum df L1 projection
+        self.minimum_df_factor = minimum_df_factor
 
     def _check_fit_data(self, X):
         """Verify that the number of samples given is larger than k
@@ -150,7 +175,8 @@ class SphericalKMeans:
                 sparsity=self.sparsity, max_iter=self.max_iter,
                 verbose=self.verbose, tol=self.tol, random_state=random_state,
                 debug_directory=self.debug_directory, algorithm=self.algorithm,
-                **self.params
+                max_similar=self.max_similar, alpha=self.alpha, radius=self.radius,
+                epsilon=self.epsilon, minimum_df_factor=self.minimum_df_factor
             )
         return self
 
@@ -208,7 +234,8 @@ def _tolerance(X, tol):
 
 def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
             verbose=False, tol=1e-4, random_state=None, debug_directory=None,
-            algorithm=None, **kargs):
+            algorithm=None, max_similar=0.5, alpha=3, radius=10.0,
+            epsilon=5.0, minimum_df_factor=0.01):
 
     random_state = check_random_state(random_state)
 
@@ -236,7 +263,8 @@ def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
         X, n_clusters, max_iter=max_iter, init=init, sparsity=sparsity,
         verbose=verbose, tol=tol, random_state=random_state,
         debug_directory=debug_directory, debug_header=debug_header,
-        algorithm=algorithm, **kargs)
+        algorithm=algorithm, max_similar=max_similar, alpha=alpha,
+        radius=radius, epsilon=epsilon, minimum_df_factor=minimum_df_factor)
 
     # parallelisation of k-means runs
     # TODO
@@ -244,7 +272,7 @@ def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
     return centers, labels, inertia
 
 
-def initialize(X, n_clusters, init, random_state, **kargs):
+def initialize(X, n_clusters, init, random_state, max_similar, alpha):
     n_samples = X.shape[0]
 
     # Random selection
@@ -264,10 +292,8 @@ def initialize(X, n_clusters, init, random_state, **kargs):
     elif isinstance(init, str) and init == 'k-means++':
         centers = _k_init(X, n_clusters, random_state)
     elif isinstance(init, str) and init == 'similar_cut':
-        max_similar = kargs.get('max_similar', 0.5)
-        sample_factor = kargs.get('sample_factor', 3)
         centers = _similar_cut_init(
-            X, n_clusters, random_state, max_similar, sample_factor)
+            X, n_clusters, random_state, max_similar, alpha)
     # Sophisticated initialization
     # TODO
     else:
@@ -335,7 +361,7 @@ def _k_init(X, n_clusters, random_state):
     return centers
 
 
-def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_factor=3):
+def _similar_cut_init(X, n_clusters, random_state, max_similar=0.5, sample_factor=3):
 
     n_data, n_features = X.shape
     centers = np.empty((n_clusters, n_features), dtype=X.dtype)
@@ -391,10 +417,11 @@ def _similar_cut_init(X, n_clusters, random_state,  max_similar=0.5, sample_fact
 
 def kmeans_single(X, n_clusters, max_iter=10, init='similar_cult', sparsity=None,
                   verbose=0, tol=1, random_state=None, debug_directory=None,
-                  debug_header=None, algorithm=None, **kargs):
+                  debug_header=None, algorithm=None, max_similar=0.5, alpha=3,
+                  radius=10.0, epsilon=5.0, minimum_df_factor=0.01):
 
     _initialize_time = time.time()
-    centers = initialize(X, n_clusters, init, random_state, **kargs)
+    centers = initialize(X, n_clusters, init, random_state, max_similar, alpha)
     _initialize_time = time.time() - _initialize_time
 
     degree_of_sparsity = None
@@ -414,18 +441,18 @@ def kmeans_single(X, n_clusters, max_iter=10, init='similar_cult', sparsity=None
 
     centers, labels, inertia, n_iter_ = _kmeans_single_banilla(
         X, sparsity, n_clusters, centers, max_iter, verbose,
-        tol, debug_directory, debug_header, **kargs)
+        tol, debug_directory, debug_header,
+        radius, epsilon, minimum_df_factor)
 
     return centers, labels, inertia, n_iter_
 
 
 def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
-                           verbose, tol, debug_directory, debug_header, **kargs):
+                           verbose, tol, debug_directory, debug_header,
+                           radius, epsilon, minimum_df_factor):
 
     n_samples = X.shape[0]
     labels_old = np.zeros((n_samples,), dtype=np.int)
-    debug_label_on = kargs.get('debug_label_on', True)
-    debug_centroid_on = kargs.get('debug_centroid_on', True)
 
     for n_iter_ in range(1, max_iter + 1):
 
@@ -445,11 +472,8 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
         labels_old = labels
 
         if isinstance(sparsity, str) and sparsity == 'sculley':
-            radius = kargs.get('radius', 10)
-            epsilon = kargs.get('epsilon', 5)
             centers = _sculley_projections(centers, radius, epsilon)
         elif isinstance(sparsity, str) and sparsity == 'minimum_df':
-            minimum_df_factor = kargs.get('minimum_df_factor', 0.01)
             centers = _minimum_df_projections(
                 X, centers, labels_old, minimum_df_factor)
 
@@ -463,25 +487,22 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
             n_iter_, n_diff, '%.3f' % inertia, '%.3f' % _iter_time, ds_strf)
 
         if debug_directory:
-
             # Log message
             log_path = '{}/{}_logs.txt'.format(debug_directory, debug_header)
             with open(log_path, 'a', encoding='utf-8') as f:
                 f.write('{}\n'.format(state))
 
             # Temporal labels
-            if debug_label_on:
-                label_path = '{}/{}_label_iter{}.txt'.format(
-                    debug_directory, debug_header, n_iter_)
-                with open(label_path, 'a', encoding='utf-8') as f:
-                    for label in labels:
-                        f.write('{}\n'.format(label))
+            label_path = '{}/{}_label_iter{}.txt'.format(
+                debug_directory, debug_header, n_iter_)
+            with open(label_path, 'a', encoding='utf-8') as f:
+                for label in labels:
+                    f.write('{}\n'.format(label))
 
             # Temporal cluster_centroid
-            if debug_centroid_on:
-                center_path = '{}/{}_centroids_iter{}.csv'.format(
-                    debug_directory, debug_header, n_iter_)
-                np.savetxt(center_path, centers)
+            center_path = '{}/{}_centroids_iter{}.csv'.format(
+                debug_directory, debug_header, n_iter_)
+            np.savetxt(center_path, centers)
 
         if verbose:
             print(state)
