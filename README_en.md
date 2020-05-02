@@ -16,8 +16,17 @@ This method is also useful for preventing the Uniform Effect, which causes the s
 Furthermore, the function for visualizing pairwise distances between centroids will help you to check whether redundant clusters exist, allowing you to remove redundant clusters by merging them.
 `soyclustering` also provides a fast initialization method that is effective in a high-dimensional vector space.
 When the size of the input data is large, the initialization method sets k to be 1000.
+The below table decsribes relative speed-up of proposed initialization method with alpha=3 compared to kmeans++ (x times faster)
 
-> Add initialization comparison figure
+| Dataset name | num rows | num features | num of nonzero (percent) | k=10 | k=20 | k=50 | k=100 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A6 blogs | 63,153 | 91,302 | 18,051,341 (0.313 %)| x 265 | x 257 | x 213 | x 150 |
+| Tucson blogs | 105,755 | 81,497 | 29,192,999 (0.339 %) | x 388 | x 440 | x 306 | x 244 |
+| Sonata blogs | 229,253 | 85,129 | 60,861,803 (0.312 \$) | x 785 | x 841 | x 614 | x 495 |
+| IMDb reviews | 1,228,348 | 68,049 | 181,411,713 (0.217 %) | x 803 | x 714 | x 1988 | x 1787 |
+| Reuter RCV1 | 804,414 | 47,236 | 60,915,113 (0.160 %) | x 439 | x 713 | x 850 | x 772 |
+| MovieLens 20M | 138,493 | 131,262 | 20,000,263 (0.110 %) | x 202 | x 213 | x 214 | x 184 |
+| Yelp reviews | 5,261,669 | 27,247 | 365,341,887 (0.255 %) | x 368 | x 908 | x 1508 | x 2917 |
 
 
 ## Usage
