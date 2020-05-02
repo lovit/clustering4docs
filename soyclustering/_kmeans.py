@@ -179,18 +179,23 @@ class SphericalKMeans:
         In the new space, each dimension is the distance to the cluster
         centers.  Note that even if X is sparse, the array returned by
         `transform` will typically be dense.
+
         Parameters
         ----------
-        X : sparse matrix, shape = [n_samples, n_features]
-            New data to transform.
+        X : scipy.sparse.csr_matrix
+            shape = (n_samples, n_features)
+            New data to be transformed to cluster center-distance matrix.
+
         Returns
         -------
-        X_new : array, shape [n_samples, k]
-            X transformed in the new space.
+        D : numpy.ndarray
+            shape = (n_samples, k)
+            D[doc_idx, cluster_idx] = distance(doc_idx, cluster_idx)
         """
-        check_is_fitted(self, 'cluster_centers_')
+        if not hasattr(self, 'cluster_centers_'):
+            raise RuntimeError('`transform` function needs centroid vectors. Train SphericalKMeans first.')
 
-        X = self._check_test_data(X)
+        X = self._check_fit_data(X)
         return self._transform(X)
     
     def _transform(self, X):

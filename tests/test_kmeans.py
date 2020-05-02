@@ -33,3 +33,15 @@ def test_kmeans(test_data):
         labels = kmeans.fit_predict(x)
         centers = kmeans.cluster_centers_
         assert centers.shape == (n_clusters, n_features)
+
+
+def test_transform(test_data):
+    x = test_data['x']
+    n_docs = x.shape[0]
+    n_clusters = 100
+    print('\ntransform test')
+    kmeans = SphericalKMeans(n_clusters=n_clusters, init='similar_cut',
+        sparsity=None, max_iter=5, tol=0.0001, verbose = True, random_state=0)
+    kmeans.fit(x)
+    distances = kmeans.transform(x)
+    assert (distances.shape == (n_docs, n_clusters)) and (distances.min() >= 0) and (distances.max() <= 1)
