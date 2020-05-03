@@ -2,7 +2,7 @@ import numpy as np
 
 
 def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
-                        candidates_topk=300, index2word=None, passwords=None):
+                        candidates_topk=300, index2word=None, stopwords=None):
     """
     Arguments
     ---------
@@ -26,7 +26,7 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
     index2word : list of str or None
         If the value is not None, the length must be p (num of features)
         If the value is None, it returns keywords as integer index
-    passwords : set of str or None
+    stopwords : set of str or None
         The set of words that will be removed from keyword set by force
 
     Returns
@@ -41,7 +41,7 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
 
     def l1_normalize(x): return x/x.sum()
 
-    index_type = passwords and isinstance(list(passwords)[0], int)
+    password_as_idx = stopwords and isinstance(list(stopwords)[0], int)
 
     n_clusters, n_features = centers.shape
     total_frequency = np.zeros(n_features)
@@ -67,20 +67,21 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
         indices = np.where(p_prop > 0)[0]
         indices = sorted(indices, key=lambda idx: -
                          p_prop[idx])[:candidates_topk]
-        scores = [(idx, p_prop[idx] / (p_prop[idx] + n_prop[idx]))
+        keywords_c = [(idx, p_prop[idx] / (p_prop[idx] + n_prop[idx]))
                   for idx in indices]
-        scores = [t for t in scores if t[1] >= min_score]
-        scores = sorted(scores, key=lambda x: -x[1])
-        keywords.append(scores)
+        keywords_c= [t for t in keywords_c if t[1] >= min_score]
+        keywords_c = sorted(keywords_c, key=lambda x: -x[1])
 
-    if passwords and index_type:
-        scores = [t for t in scores if t[0] in passwords]
+        if stopwords and password_as_idx:
+            keywords_c = [t for t in keywords_c if t[0] not in stopwords]
 
-    if index2word is not None:
-        keywords = [[(index2word[idx], score)
-                     for idx, score in keyword] for keyword in keywords]
-        if passwords and not index_type:
-            keywords = [t for t in keywords if t[0] in passwords]
+        if index2word is not None:
+            keywords_c = [(index2word[idx], score) for idx, score in keywords_c]
+            if stopwords and not password_as_idx:
+                keywords_c = [t for t in keywords_c if t[0] not in stopwords]
+
+        keywords.append(keywords_c)
+
 
     if topk > 0:
         keywords = [keyword[:topk] for keyword in keywords]
