@@ -29,6 +29,15 @@ The below table decsribes relative speed-up of proposed initialization method wi
 | Yelp reviews | 5,261,669 | 27,247 | 365,341,887 (0.255 %) | x 368 | x 908 | x 1508 | x 2917 |
 
 
+## Install
+
+Using pip
+
+```
+pip install soyclustering
+```
+
+
 ## Usage
 
 You can read a matrix market file as follows. Note that the file must include tokenized outputs. Although the spherical k-means function can be used for inputs in distributed representation such as Doc2Vec, our cluster labeling algorithm works only for Bag-of-Words model.
