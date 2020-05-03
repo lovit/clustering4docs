@@ -8,6 +8,7 @@ from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics import pairwise_distances_argmin_min
 from sklearn.preprocessing import normalize
 from sklearn.utils.extmath import stable_cumsum
+from sklearn.utils import check_random_state
 from sklearn.utils import check_array
 from sklearn.utils import as_float_array
 
@@ -324,8 +325,8 @@ def _k_init(X, n_clusters, random_state):
     """
 
     n_samples, n_features = X.shape
-
     centers = np.empty((n_clusters, n_features), dtype=X.dtype)
+    random_state = check_random_state(random_state)
 
     # Set the number of local seeding trials if none is given
     # This is what Arthur/Vassilvitskii tried, but did not report
