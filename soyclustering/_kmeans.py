@@ -7,7 +7,6 @@ import time
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics import pairwise_distances_argmin_min
 from sklearn.preprocessing import normalize
-from sklearn.utils import check_random_state
 from sklearn.utils.extmath import stable_cumsum
 from sklearn.utils import check_array
 from sklearn.utils import as_float_array
@@ -166,14 +165,13 @@ class SphericalKMeans:
             Training instances
         y : Ignored
         """
-        random_state = check_random_state(self.random_state)
         X = self._check_fit_data(X)
 
         self.cluster_centers_, self.labels_, self.inertia_, = \
             k_means(
                 X, n_clusters=self.n_clusters, init=self.init,
                 sparsity=self.sparsity, max_iter=self.max_iter,
-                verbose=self.verbose, tol=self.tol, random_state=random_state,
+                verbose=self.verbose, tol=self.tol, random_state=self.random_state,
                 debug_directory=self.debug_directory, algorithm=self.algorithm,
                 max_similar=self.max_similar, alpha=self.alpha, radius=self.radius,
                 epsilon=self.epsilon, minimum_df_factor=self.minimum_df_factor
@@ -237,8 +235,6 @@ def k_means(X, n_clusters, init='similar_cut', sparsity=None, max_iter=10,
             algorithm=None, max_similar=0.5, alpha=3, radius=10.0,
             epsilon=5.0, minimum_df_factor=0.01):
 
-    random_state = check_random_state(random_state)
-
     if max_iter <= 0:
         raise ValueError('Number of iterations should be a positive number,'
                          ' got %d instead' % max_iter)
@@ -277,6 +273,7 @@ def initialize(X, n_clusters, init, random_state, max_similar, alpha):
 
     # Random selection
     if isinstance(init, str) and init == 'random':
+        np.random.seed(random_state)
         seeds = random_state.permutation(n_samples)[:n_clusters]
         centers = X[seeds, :].todense()
     # Customized initial centroids
@@ -366,13 +363,14 @@ def _similar_cut_init(X, n_clusters, random_state, max_similar=0.5, sample_facto
     n_data, n_features = X.shape
     centers = np.empty((n_clusters, n_features), dtype=X.dtype)
 
+    np.random.seed(random_state)
     n_subsamples = min(n_data, int(sample_factor * n_clusters))
     permutation = np.random.permutation(n_data)
     X_sub = X[permutation[:n_subsamples]]
     n_samples = X_sub.shape[0]
 
     # Pick first center randomly
-    center_id = random_state.randint(n_samples)
+    center_id = np.random.randint(n_samples)
     center_set = {center_id}
     centers[0] = X[center_id].toarray()
     candidates = np.asarray(range(n_samples))
