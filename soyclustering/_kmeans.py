@@ -451,7 +451,10 @@ def _kmeans_single_banilla(X, sparsity, n_clusters, centers, max_iter,
                            radius, epsilon, minimum_df_factor):
 
     n_samples = X.shape[0]
-    labels_old = np.zeros((n_samples,), dtype=np.int)
+    # np.int is deprecated
+    # https://numpy.org/doc/stable/release/1.20.0-notes.html
+    # labels_old = np.zeros((n_samples,), dtype=np.int)
+    labels_old = np.zeros((n_samples,), dtype=int)
 
     for n_iter_ in range(1, max_iter + 1):
 
@@ -625,11 +628,12 @@ def _minimum_df_projections(X, centers, labels_, minimum_df_factor):
         for ind in range(indptr[c], indptr[c + 1]):
             if data[ind] ** 2 < min_value[c]:
                 data[ind] = 0
-    centers_ = centers_.todense()
-    centers_ = normalize(centers_)
+    # np.matrix isn't allowed, calling normalize on it raises
+    # TypeError: np.matrix is not supported. Please convert to a numpy array with np.asarray.
+    centers_ = normalize(np.asarray(centers_.todense()))
     return centers_
 
 
 def _minimum_df_projection(center, min_value):
-    center[[idx for idx, v in enumerate(center) if v**2 < min_value]] = 0
+    center[[idx for idx, v in enumerate(center) if v ** 2 < min_value]] = 0
     return center

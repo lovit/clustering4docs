@@ -31,6 +31,6 @@ def check_sparsity(x):
     sparsity : float
         1 - proportion of nonzero elements
     """
-    n,m = x.shape
-    return 1-sum(len(np.where(x[c] != 0)[0]) for c in range(n)) / (n*m)
+    n, m = x.shape
+    return 1 - sum(len(np.where(x[c] != 0)[0]) for c in range(n)) / (n * m)
 

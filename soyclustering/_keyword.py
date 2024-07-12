@@ -39,7 +39,13 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
         ]
     """
 
-    def l1_normalize(x): return x/x.sum()
+    def l1_normalize(x):
+        # avoid zero division error
+        xsum = np.sum(x)
+        if xsum == 0:
+            return x
+        else:
+            return x / xsum
 
     password_as_idx = stopwords and isinstance(list(stopwords)[0], int)
 
@@ -65,11 +71,9 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
         p_prop = l1_normalize(centers[c])
 
         indices = np.where(p_prop > 0)[0]
-        indices = sorted(indices, key=lambda idx: -
-                         p_prop[idx])[:candidates_topk]
-        keywords_c = [(idx, p_prop[idx] / (p_prop[idx] + n_prop[idx]))
-                  for idx in indices]
-        keywords_c= [t for t in keywords_c if t[1] >= min_score]
+        indices = sorted(indices, key=lambda idx: -p_prop[idx])[:candidates_topk]
+        keywords_c = [(idx, p_prop[idx] / (p_prop[idx] + n_prop[idx])) for idx in indices]
+        keywords_c = [t for t in keywords_c if t[1] >= min_score]
         keywords_c = sorted(keywords_c, key=lambda x: -x[1])
 
         if stopwords and password_as_idx:
@@ -81,7 +85,6 @@ def proportion_keywords(centers, labels=None, min_score=0.5, topk=200,
                 keywords_c = [t for t in keywords_c if t[0] not in stopwords]
 
         keywords.append(keywords_c)
-
 
     if topk > 0:
         keywords = [keyword[:topk] for keyword in keywords]
